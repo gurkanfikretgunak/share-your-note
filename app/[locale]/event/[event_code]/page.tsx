@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { EventFeed } from '@/components/event-feed'
 import { HostAnnouncement } from '@/components/host-announcement'
 import { ImageUpload } from '@/components/image-upload'
@@ -750,9 +752,73 @@ export default function EventPage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
-        <div className="text-center">
-          <p className="text-muted-foreground">{t('loading')}</p>
+      <div className="min-h-screen flex flex-col bg-white">
+        {/* Header Skeleton */}
+        <header className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b">
+          <div className="max-w-2xl mx-auto px-4 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <Skeleton className="h-6 sm:h-8 w-48" />
+                  <Skeleton className="h-8 w-8 shrink-0 rounded" />
+                </div>
+                <Skeleton className="h-3 sm:h-4 w-32" />
+              </div>
+              <div className="shrink-0">
+                <Skeleton className="h-10 w-[120px]" />
+              </div>
+            </div>
+          </div>
+        </header>
+        
+        <div className="flex-1 overflow-y-auto p-4 pb-32">
+          <div className="max-w-2xl mx-auto">
+            {/* Badge Skeleton */}
+            <div className="mb-6">
+              <div className="flex items-center justify-end mb-2">
+                <Skeleton className="h-6 w-20" />
+              </div>
+            </div>
+
+            {/* Notes Feed Skeleton */}
+            <div className="space-y-4">
+              {[...Array(5)].map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <Skeleton className="h-10 w-10 rounded-full" />
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-4 w-24" />
+                          <Skeleton className="h-3 w-20" />
+                        </div>
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-3/4" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Input Area Skeleton */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4">
+          <div className="max-w-2xl mx-auto space-y-3">
+            <div className="flex gap-2">
+              <Skeleton className="h-10 flex-1" />
+              <Skeleton className="h-10 w-20" />
+            </div>
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-10 w-32" />
+              <div className="flex gap-2 ml-auto">
+                {[...Array(4)].map((_, i) => (
+                  <Skeleton key={i} className="h-10 w-10 rounded-full" />
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -909,23 +975,19 @@ export default function EventPage() {
   return (
     <EventTheme mode={event.event_mode}>
       <div className="min-h-screen flex flex-col">
-        {/* Language Switcher */}
-        <div className="absolute top-4 right-4 z-20">
-          <LanguageSwitcher />
-        </div>
-        
-        <div className="flex-1 overflow-y-auto p-4 pb-32">
-          <div className="max-w-2xl mx-auto">
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-3">
-                  <h1 className="text-2xl font-semibold">{event.title}</h1>
+        {/* Header */}
+        <header className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b">
+          <div className="max-w-2xl mx-auto px-4 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <h1 className="text-xl sm:text-2xl font-semibold truncate">{event.title}</h1>
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={handleRefresh}
                     disabled={isRefreshing}
-                    className={`h-8 w-8 transition-all duration-300 ${
+                    className={`h-8 w-8 shrink-0 transition-all duration-300 ${
                       isRefreshing 
                         ? 'opacity-50 cursor-not-allowed' 
                         : refreshSuccess 
@@ -941,11 +1003,25 @@ export default function EventPage() {
                     />
                   </Button>
                 </div>
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                  {t('eventCode')}: {event.event_code}
+                </p>
+              </div>
+              <div className="shrink-0">
+                <LanguageSwitcher />
+              </div>
+            </div>
+          </div>
+        </header>
+        
+        <div className="flex-1 overflow-y-auto p-4 pb-32">
+          <div className="max-w-2xl mx-auto">
+            <div className="mb-6">
+              <div className="flex items-center justify-end mb-2">
                 <Badge variant="secondary" className="text-sm">
                   {notes.length} {notes.length === 1 ? tCommon('message') : tCommon('messages')}
                 </Badge>
               </div>
-              <p className="text-sm text-muted-foreground">{t('eventCode')}: {event.event_code}</p>
             </div>
 
             <HostAnnouncement eventCode={event.event_code} />
