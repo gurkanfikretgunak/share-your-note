@@ -9,11 +9,14 @@ A real-time, Kahoot-like web application where attendees can join events managed
 - **UI Kit:** shadcn/ui
 - **Styling:** Tailwind CSS
 - **Animations:** React Confetti, CSS Animations
+- **Internationalization:** next-intl (Turkish & English support)
 
 ## Features
 
 ### Core Features
 
+- **Internationalization (i18n):** Full Turkish and English language support with URL-based routing (`/tr/...`, `/en/...`)
+- **Language Switcher:** Easy language switching available on all pages
 - **Anonymous Attendee Joining:** Attendees can join events with just a username
 - **Real-time Updates:** Live feed of notes, images, and emotions using Supabase Realtime
 - **Host Dashboard:** Create and manage events with QR codes
@@ -27,6 +30,7 @@ A real-time, Kahoot-like web application where attendees can join events managed
 - **Consent Management:** GDPR, policy, cookie, and event data sharing consents for participants
 - **Event Title Editing:** Hosts can edit event titles anytime
 - **Event Restart:** Hosts can restart finished events
+- **Statistics Dashboard:** Hosts can view total messages, likes, and image messages
 
 ### Visual Effects & Animations
 
@@ -66,9 +70,13 @@ A real-time, Kahoot-like web application where attendees can join events managed
 - **Event Customization:**
   - Edit event titles anytime
   - Set event modes (General, Birthday, Party)
-- **QR Code Generation:** Automatic QR code generation for easy sharing
+- **QR Code Generation:** Automatic QR code generation for easy sharing (includes locale in URL)
 - **Real-time Announcements:** Broadcast messages to all attendees
 - **Participant Monitoring:** View all attendees and their submissions in real-time
+- **Statistics Dashboard:** View real-time statistics:
+  - Total messages count
+  - Total likes received
+  - Number of image messages
 
 ## Setup Instructions
 
@@ -126,67 +134,82 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ### For Hosts
 
-1. Navigate to `/auth/signup` to create an account
-2. Sign in at `/auth/login`
-3. Go to `/host/dashboard`
+1. Navigate to `/[locale]/auth/signup` (e.g., `/tr/auth/signup` or `/en/auth/signup`) to create an account
+2. Sign in at `/[locale]/auth/login`
+3. Go to `/[locale]/host/dashboard`
 4. Click "Create New Event" and fill in the details
 5. Select an event mode (General, Birthday, or Party)
-6. Share the event code or QR code with attendees
+6. Share the event code or QR code with attendees (QR code includes locale)
 7. Click "Start Event" when ready
 8. **Manage Messages:**
    - Favorite important messages (star icon)
    - Delete inappropriate messages (trash icon)
    - View like counts on messages
-9. **Edit Event:**
-   - Click the edit icon next to the event title to change it
-10. **Control Event Status:**
+9. **View Statistics:**
+   - See total messages, likes, and image messages in real-time
+10. **Edit Event:**
+    - Click the edit icon next to the event title to change it
+11. **Control Event Status:**
     - Pause event (sets to pending)
     - End event (sets to finished)
     - Restart finished events
-11. Send announcements using the announcement input
-12. View real-time feed of attendee submissions
+12. Send announcements using the announcement input
+13. View real-time feed of attendee submissions
+14. **Change Language:** Use the language switcher in the header to switch between Turkish and English
 
 ### For Attendees
 
-1. Go to the home page
-2. **Select a mode** using the toggle buttons (General, Birthday, or Party) to customize your experience
-3. Enter the event code or scan the QR code
-4. **Accept Consents:** Accept GDPR, policy, cookie, and event data sharing consents
-5. Enter your name when prompted
-6. Start sharing notes, images, or emotions!
-7. **Interact with Messages:**
+1. Go to the home page (`/tr` for Turkish or `/en` for English)
+2. **Change Language:** Use the language switcher in the top-right corner
+3. **Select a mode** using the toggle buttons (General, Birthday, or Party) to customize your experience
+4. Enter the event code or scan the QR code
+5. **Accept Consents:** Accept GDPR, policy, cookie, and event data sharing consents
+6. Enter your name when prompted
+7. Start sharing notes, images, or emotions!
+8. **Interact with Messages:**
    - Like messages from other participants (heart icon)
    - See like counts on all messages
    - View favorited messages highlighted at the top
-8. Enjoy the visual effects based on the event mode
-9. Note: You cannot join events that are pending or finished
+9. Enjoy the visual effects based on the event mode
+10. Note: You cannot join events that are pending or finished
 
 ## Project Structure
 
 ```
 /
 ├── app/
-│   ├── page.tsx                    # Home page (attendee entry with mode selection)
-│   ├── event/[event_code]/        # Event page for attendees
-│   ├── host/
-│   │   ├── dashboard/             # Host dashboard
-│   │   └── layout.tsx             # Protected route wrapper
-│   └── auth/                       # Authentication pages
+│   ├── [locale]/                    # Locale-based routing (tr, en)
+│   │   ├── page.tsx                 # Home page (attendee entry with mode selection)
+│   │   ├── event/[event_code]/      # Event page for attendees
+│   │   ├── host/
+│   │   │   ├── dashboard/           # Host dashboard
+│   │   │   └── layout.tsx           # Protected route wrapper
+│   │   └── auth/                    # Authentication pages
+│   ├── layout.tsx                    # Root layout
+│   └── globals.css                  # Global styles
 ├── components/
-│   ├── ui/                         # shadcn/ui components
-│   ├── qr-scanner.tsx             # QR code scanner
-│   ├── event-feed.tsx             # Notes feed display
-│   ├── host-announcement.tsx      # Host announcements
-│   ├── image-upload.tsx           # Image upload component
-│   └── event-theme.tsx            # Event mode theming
+│   ├── ui/                          # shadcn/ui components
+│   ├── qr-scanner.tsx               # QR code scanner
+│   ├── event-feed.tsx               # Notes feed display
+│   ├── host-announcement.tsx        # Host announcements
+│   ├── image-upload.tsx             # Image upload component
+│   ├── event-theme.tsx              # Event mode theming
+│   └── language-switcher.tsx        # Language switcher component
+├── i18n/
+│   ├── routing.ts                    # i18n routing configuration
+│   └── request.ts                   # i18n request configuration
+├── messages/
+│   ├── tr.json                      # Turkish translations
+│   └── en.json                      # English translations
 ├── lib/
-│   ├── supabase.ts                # Client-side Supabase client
-│   ├── supabase-server.ts         # Server-side Supabase client
-│   └── anonymous-auth.ts          # Anonymous user handling
+│   ├── supabase.ts                  # Client-side Supabase client
+│   ├── supabase-server.ts           # Server-side Supabase client
+│   └── anonymous-auth.ts            # Anonymous user handling
+├── middleware.ts                    # Next.js middleware for locale routing
 ├── supabase/
-│   └── migrations/                # Database migrations
+│   └── migrations/                  # Database migrations
 └── types/
-    └── database.types.ts          # TypeScript types
+    └── database.types.ts             # TypeScript types
 ```
 
 ## Database Schema
@@ -200,6 +223,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Notes
 
+- **Internationalization:** Default language is Turkish (tr). All routes are prefixed with locale (`/tr/...`, `/en/...`). Language switcher is available on all pages.
 - Anonymous users are stored in the `profiles` table with generated UUIDs
 - Event codes are 6-character alphanumeric strings
 - Events have three statuses: `pending`, `active`, `finished`
@@ -215,9 +239,11 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 - **Like System:** Participants can like messages, with real-time like count updates
 - **Event Control:** Hosts can pause, end, and restart events, controlling participant access
 - **Title Editing:** Hosts can edit event titles anytime from the dashboard
+- **Statistics:** Hosts can view real-time statistics (total messages, likes, image messages) in the dashboard
 - Participants cannot join events with `pending` or `finished` status
 - Favorited messages are sorted to the top of the feed
 - Like counts are displayed with a heart icon next to each message
+- **Home Page Layout:** Buttons are organized in a container card, footer is displayed as a single line at the bottom
 
 ## License
 

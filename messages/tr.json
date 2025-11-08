@@ -1,0 +1,211 @@
+{
+  "common": {
+    "loading": "Yükleniyor...",
+    "error": "Hata",
+    "cancel": "İptal",
+    "save": "Kaydet",
+    "delete": "Sil",
+    "edit": "Düzenle",
+    "close": "Kapat",
+    "ok": "Tamam",
+    "send": "Gönder",
+    "join": "Katıl",
+    "joining": "Katılıyor...",
+    "back": "Geri",
+    "home": "Ana Sayfa",
+    "logout": "Çıkış",
+    "yes": "Evet",
+    "no": "Hayır",
+    "confirm": "Onayla",
+    "share": "Paylaş",
+    "like": "Beğen",
+    "unlike": "Beğenmeyi Kaldır",
+    "favorite": "Favorile",
+    "unfavorite": "Favorilerden Çıkar",
+    "favorited": "Favorilendi",
+    "likes": "beğeni",
+    "messages": "mesaj",
+    "message": "mesaj"
+  },
+  "home": {
+    "title": "Share Your Note",
+    "subtitle": "Etkinliğe katıl ve düşüncelerini paylaş",
+    "modes": {
+      "general": "Genel",
+      "birthday": "Doğum Günü",
+      "party": "Parti"
+    },
+    "eventCodePlaceholder": "Etkinlik Kodunu Girin (örn: ABC123)",
+    "joinButton": "Katıl",
+    "joinWithQR": "QR Kod ile Katıl",
+    "hostPrompt": "Host musunuz?",
+    "goToDashboard": "Dashboard'a Git",
+    "errors": {
+      "enterCode": "Lütfen bir etkinlik kodu girin",
+      "invalidCode": "Geçersiz etkinlik kodu. Lütfen kontrol edip tekrar deneyin.",
+      "eventEnded": "Bu etkinlik sona erdi.",
+      "eventPending": "Bu etkinlik henüz başlamadı. Lütfen host'un etkinliği başlatmasını bekleyin.",
+      "somethingWrong": "Bir şeyler yanlış gitti. Lütfen tekrar deneyin."
+    }
+  },
+  "event": {
+    "loading": "Etkinlik yükleniyor...",
+    "notFound": "Etkinlik Bulunamadı",
+    "eventCode": "Etkinlik Kodu",
+    "joinTitle": "Etkinliğe Katıl",
+    "joinSubtitle": "Katılmak için adınızı girin ve onayları kabul edin",
+    "usernamePlaceholder": "Adınız",
+    "joinButton": "Katıl",
+    "consents": {
+      "gdpr": "GDPR veri koruma politikasını kabul ediyorum",
+      "policy": "Kullanım şartlarını ve gizlilik politikasını kabul ediyorum",
+      "cookie": "Çerez kullanımını kabul ediyorum",
+      "eventData": "Etkinlik ile ilgili verilerimin paylaşılmasını kabul ediyorum",
+      "allRequired": "Lütfen tüm onayları kabul edin"
+    },
+    "finished": {
+      "title": "Etkinlik Sona Erdi",
+      "message": "Bu etkinlik tamamlandı. Katıldığınız için teşekkür ederiz!",
+      "backToHome": "Ana Sayfaya Dön"
+    },
+    "feed": {
+      "noNotes": "Henüz mesaj yok. İlk paylaşımı sen yap!",
+      "sharePlaceholder": "Düşüncelerini paylaş...",
+      "participantJoined": "{username} etkinliğe katıldı!",
+      "refresh": "Yenile",
+      "refreshing": "Yenileniyor...",
+      "emotions": {
+        "happy": "Mutlu",
+        "love": "Aşk",
+        "like": "Beğen",
+        "celebrate": "Kutla"
+      }
+    },
+    "errors": {
+      "notFound": "Etkinlik bulunamadı",
+      "failedToLoad": "Etkinlik yüklenirken hata oluştu",
+      "failedToJoin": "Etkinliğe katılırken hata oluştu",
+      "failedToSubmit": "Gönderilirken hata oluştu",
+      "failedToLike": "Beğeni işlemi başarısız"
+    }
+  },
+  "host": {
+    "dashboard": "Host Dashboard",
+    "loading": "Yükleniyor...",
+    "noEvent": {
+      "title": "Henüz Etkinlik Yok",
+      "subtitle": "Başlamak için yeni bir etkinlik oluşturun",
+      "createButton": "Yeni Etkinlik Oluştur"
+    },
+    "createEvent": {
+      "title": "Yeni Etkinlik Oluştur",
+      "description": "Katılımcıların katılabileceği yeni bir etkinlik oluşturun. Etkinlik kodu otomatik olarak oluşturulacaktır.",
+      "eventTitle": "Etkinlik Başlığı",
+      "eventTitlePlaceholder": "Örn: Yılbaşı Partisi",
+      "eventMode": "Etkinlik Modu",
+      "modes": {
+        "general": "Genel",
+        "birthday": "Doğum Günü",
+        "party": "Parti"
+      },
+      "cancel": "İptal",
+      "create": "Oluştur",
+      "creating": "Oluşturuluyor...",
+      "error": "Etkinlik oluşturulurken hata oluştu"
+    },
+    "event": {
+      "eventCode": "Event Code",
+      "status": "Durum",
+      "statuses": {
+        "pending": "Beklemede",
+        "active": "Aktif",
+        "finished": "Bitiş"
+      },
+      "start": "Etkinliği Başlat",
+      "pause": "Etkinliği Duraklat",
+      "end": "Etkinliği Bitir",
+      "restart": "Etkinliği Tekrar Başlat",
+      "endConfirm": "Bu etkinliği sonlandırmak istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+      "finished": "Bu etkinlik sona erdi",
+      "announcement": "Duyuru Gönder",
+      "announcementPlaceholder": "Duyuru mesajı...",
+      "editTitle": "Başlığı Düzenle",
+      "titleUpdateError": "Başlık güncellenirken hata oluştu"
+    },
+    "feed": {
+      "title": "Katılımcı Akışı",
+      "noNotes": "Henüz mesaj yok. Etkinlik kodunu katılımcılarla paylaşın!",
+      "stats": {
+        "totalMessages": "Toplam Mesaj",
+        "totalLikes": "Toplam Beğeni",
+        "imageMessages": "Görsel Mesaj"
+      },
+      "deleteConfirm": "Bu mesajı silmek istediğinizden emin misiniz?",
+      "deleteError": "Mesaj silinirken hata oluştu",
+      "favoriteError": "Favori durumu güncellenirken hata oluştu",
+      "deleteTitle": "Mesajı Sil",
+      "favoriteTitle": "Favorilere Ekle",
+      "unfavoriteTitle": "Favorilerden Çıkar"
+    },
+    "errors": {
+      "startFailed": "Etkinlik başlatılırken hata oluştu",
+      "pauseFailed": "Etkinlik duraklatılırken hata oluştu",
+      "endFailed": "Etkinlik sonlandırılırken hata oluştu"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Host Login",
+      "subtitle": "Etkinliklerinizi yönetmek için giriş yapın",
+      "email": "E-posta",
+      "emailPlaceholder": "ornek@email.com",
+      "password": "Şifre",
+      "passwordPlaceholder": "••••••••",
+      "signIn": "Giriş Yap",
+      "signingIn": "Giriş yapılıyor...",
+      "noAccount": "Hesabınız yok mu?",
+      "signUp": "Kayıt ol",
+      "backToHome": "Ana sayfaya dön",
+      "error": "Giriş yapılırken hata oluştu"
+    },
+    "signup": {
+      "title": "Host Sign Up",
+      "subtitle": "Etkinlik düzenlemek için hesap oluşturun",
+      "username": "Kullanıcı Adı",
+      "usernamePlaceholder": "Kullanıcı adınız",
+      "email": "E-posta",
+      "emailPlaceholder": "ornek@email.com",
+      "password": "Şifre",
+      "passwordPlaceholder": "••••••••",
+      "signUp": "Kayıt Ol",
+      "creating": "Hesap oluşturuluyor...",
+      "hasAccount": "Zaten hesabınız var mı?",
+      "signIn": "Giriş yap",
+      "backToHome": "Ana sayfaya dön",
+      "error": "Kayıt olurken hata oluştu"
+    }
+  },
+  "qr": {
+    "title": "QR Kodunu Tara",
+    "initializing": "Kamera başlatılıyor...",
+    "tips": {
+      "title": "İpuçları:",
+      "permission": "Bu web sitesine kamera izni verdiğinizden emin olun",
+      "settings": "İzinler reddedildiyse tarayıcı ayarlarınızı kontrol edin",
+      "refresh": "Sayfayı yenileyin ve kamera erişimine izin verin"
+    },
+    "errors": {
+      "containerNotFound": "QR tarayıcı konteyneri bulunamadı",
+      "permissionDenied": "Kamera izni reddedildi. Lütfen kamera erişimine izin verin ve tekrar deneyin.",
+      "permissionDeniedSettings": "Kamera izni reddedildi. Lütfen tarayıcı ayarlarınızdan kamera erişimine izin verin ve tekrar deneyin.",
+      "noCamera": "Kamera bulunamadı. Lütfen bir kamera bağlayın ve tekrar deneyin.",
+      "initFailed": "QR tarayıcı başlatılamadı. Lütfen kamera izinlerinizi kontrol edin ve tekrar deneyin."
+    }
+  },
+  "announcement": {
+    "title": "Host Duyurusu",
+    "description": "Host önemli bir mesaj gönderdi",
+    "cardTitle": "Host Duyurusu"
+  }
+}
+

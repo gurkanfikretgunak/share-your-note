@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { useTranslations, useLocale } from 'next-intl'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -10,10 +11,11 @@ import { EventFeed } from '@/components/event-feed'
 import { HostAnnouncement } from '@/components/host-announcement'
 import { ImageUpload } from '@/components/image-upload'
 import { EventTheme } from '@/components/event-theme'
+import { LanguageSwitcher } from '@/components/language-switcher'
 import { createClient } from '@/lib/supabase'
 import { getOrCreateAnonymousUser, getStoredAnonymousUser } from '@/lib/anonymous-auth'
 import { NoteWithParticipant, Event, Participant, ConsentType } from '@/types/database.types'
-import { Smile, Heart, ThumbsUp, PartyPopper, CheckCircle2, Home, X } from 'lucide-react'
+import { Smile, Heart, ThumbsUp, PartyPopper, CheckCircle2, Home, X, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
 const EMOTIONS = [
@@ -26,7 +28,11 @@ const EMOTIONS = [
 export default function EventPage() {
   const params = useParams()
   const router = useRouter()
+  const locale = useLocale()
   const eventCode = params.event_code as string
+  const t = useTranslations('event')
+  const tCommon = useTranslations('common')
+  const tEmotions = useTranslations('event.feed.emotions')
 
   const [event, setEvent] = useState<Event | null>(null)
   const [participant, setParticipant] = useState<Participant | null>(null)
@@ -43,6 +49,8 @@ export default function EventPage() {
   const [cookieConsent, setCookieConsent] = useState(false)
   const [eventDataConsent, setEventDataConsent] = useState(false)
   const [eventStatus, setEventStatus] = useState<'pending' | 'active' | 'finished' | null>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [refreshSuccess, setRefreshSuccess] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -91,7 +99,7 @@ export default function EventPage() {
         .single()
 
       if (eventError || !eventData) {
-        setError('Event not found')
+        setError(t('errors.notFound'))
         setIsLoading(false)
         return
       }
@@ -104,7 +112,7 @@ export default function EventPage() {
       }
 
       if (eventData.status === 'pending') {
-        setError('Bu etkinlik henüz başlamadı. Lütfen host\'un etkinliği başlatmasını bekleyin.')
+        setError(t('errors.eventPending'))
         setIsLoading(false)
         return
       }
@@ -146,7 +154,7 @@ export default function EventPage() {
 
     // Check if all required consents are given
     if (!gdprConsent || !policyConsent || !cookieConsent || !eventDataConsent) {
-      setError('Lütfen tüm onayları kabul edin')
+      setError(t('consents.allRequired'))
       return
     }
 
@@ -160,7 +168,7 @@ export default function EventPage() {
       setShowUsernamePrompt(false)
     } catch (err) {
       const error = err as Error
-      setError(error.message || 'Failed to join event')
+      setError(error.message || t('errors.failedToJoin'))
       setIsLoading(false)
       // Keep username prompt open on error
     }
@@ -223,7 +231,7 @@ export default function EventPage() {
     } catch (err) {
       const error = err as Error
       console.error('joinEvent: Exception:', error)
-      setError(error.message || 'Failed to join event')
+      setError(error.message || t('errors.failedToJoin'))
       setIsLoading(false)
       throw err // Re-throw to handle in handleUsernameSubmit
     }
@@ -324,6 +332,11 @@ export default function EventPage() {
                   return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
                 })
               })
+              // Show refresh success feedback when new note arrives
+              setRefreshSuccess(true)
+              setTimeout(() => {
+                setRefreshSuccess(false)
+              }, 1000)
             }
           } catch (err) {
             console.error('Error processing new note:', err)
@@ -489,7 +502,7 @@ export default function EventPage() {
               .single()
 
             if (newParticipant && newParticipant.profile) {
-              toast.success(`${newParticipant.profile.username} joined the event!`, {
+              toast.success(t('feed.participantJoined', { username: newParticipant.profile.username }), {
                 duration: 3000,
               })
             }
@@ -511,10 +524,15 @@ export default function EventPage() {
     }
   }
 
-  const loadNotes = async (supabaseClient = createClient()) => {
+  const loadNotes = async (supabaseClient = createClient(), showRefreshFeedback = false) => {
     if (!event || !participant) return
 
     try {
+      if (showRefreshFeedback) {
+        setIsRefreshing(true)
+        setRefreshSuccess(false)
+      }
+
       // First get all notes
       const { data: notesData, error: notesError } = await supabaseClient
         .from('notes')
@@ -532,11 +550,19 @@ export default function EventPage() {
 
       if (notesError) {
         console.error('Error loading notes:', notesError)
-        setError('Failed to load notes: ' + notesError.message)
+        setError(t('errors.failedToLoad') + ': ' + notesError.message)
+        if (showRefreshFeedback) {
+          setIsRefreshing(false)
+        }
         return
       }
 
-      if (!notesData) return
+      if (!notesData) {
+        if (showRefreshFeedback) {
+          setIsRefreshing(false)
+        }
+        return
+      }
 
       // Get like counts and check if current user liked each note
       const noteIds = notesData.map((n: { id: string }) => n.id)
@@ -566,11 +592,28 @@ export default function EventPage() {
       })
 
       setNotes(sortedNotes)
+
+      if (showRefreshFeedback) {
+        setIsRefreshing(false)
+        setRefreshSuccess(true)
+        // Reset success state after 1 second
+        setTimeout(() => {
+          setRefreshSuccess(false)
+        }, 1000)
+      }
     } catch (err) {
       const error = err as Error
       console.error('Error loading notes:', error)
-      setError('Failed to load notes: ' + error.message)
+      setError(t('errors.failedToLoad') + ': ' + error.message)
+      if (showRefreshFeedback) {
+        setIsRefreshing(false)
+      }
     }
+  }
+
+  const handleRefresh = async () => {
+    if (!event || !participant || isRefreshing) return
+    await loadNotes(createClient(), true)
   }
 
   const handleSubmitText = async () => {
@@ -595,7 +638,7 @@ export default function EventPage() {
       // Note will be added via realtime subscription, no need to reload
     } catch (err) {
       const error = err as Error
-      setError(error.message || 'Failed to submit note')
+      setError(error.message || t('errors.failedToSubmit'))
     } finally {
       setIsSubmitting(false)
     }
@@ -622,7 +665,7 @@ export default function EventPage() {
       // Note will be added via realtime subscription, no need to reload
     } catch (err) {
       const error = err as Error
-      setError(error.message || 'Failed to submit emotion')
+      setError(error.message || t('errors.failedToSubmit'))
     } finally {
       setIsSubmitting(false)
     }
@@ -649,7 +692,7 @@ export default function EventPage() {
       // Note will be added via realtime subscription, no need to reload
     } catch (err) {
       const error = err as Error
-      setError(error.message || 'Failed to submit image')
+      setError(error.message || t('errors.failedToSubmit'))
     } finally {
       setIsSubmitting(false)
     }
@@ -701,7 +744,7 @@ export default function EventPage() {
     } catch (err) {
       const error = err as Error
       console.error('Error toggling like:', error)
-      setError('Beğeni işlemi başarısız: ' + error.message)
+      setError(t('errors.failedToLike') + ': ' + error.message)
     }
   }
 
@@ -709,7 +752,7 @@ export default function EventPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-white">
         <div className="text-center">
-          <p className="text-muted-foreground">Loading event...</p>
+          <p className="text-muted-foreground">{t('loading')}</p>
         </div>
       </div>
     )
@@ -722,11 +765,11 @@ export default function EventPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-destructive/10 mb-4">
             <X className="h-8 w-8 text-destructive" />
           </div>
-          <h2 className="text-2xl font-semibold text-gray-900">Etkinlik Bulunamadı</h2>
+          <h2 className="text-2xl font-semibold text-gray-900">{t('notFound')}</h2>
           <p className="text-muted-foreground">{error}</p>
-          <Button onClick={() => router.push('/')} className="mt-4">
+          <Button onClick={() => router.push(`/${locale}`)} className="mt-4">
             <Home className="mr-2 h-4 w-4" />
-            Ana Sayfaya Dön
+            {tCommon('home')}
           </Button>
         </div>
       </div>
@@ -742,16 +785,16 @@ export default function EventPage() {
           </div>
           <div className="space-y-2">
             <h1 className="text-4xl font-bold text-gray-900">{event.title}</h1>
-            <p className="text-xl text-muted-foreground">Etkinlik Sona Erdi</p>
+            <p className="text-xl text-muted-foreground">{t('finished.title')}</p>
           </div>
           <div className="bg-white/80 backdrop-blur-sm rounded-lg p-6 shadow-lg border border-white/20">
             <p className="text-gray-600 mb-4">
-              Bu etkinlik tamamlandı. Katıldığınız için teşekkür ederiz!
+              {t('finished.message')}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button onClick={() => router.push('/')} variant="default" className="w-full sm:w-auto">
+              <Button onClick={() => router.push(`/${locale}`)} variant="default" className="w-full sm:w-auto">
                 <Home className="mr-2 h-4 w-4" />
-                Ana Sayfaya Dön
+                {t('finished.backToHome')}
               </Button>
             </div>
           </div>
@@ -765,8 +808,8 @@ export default function EventPage() {
       <div className="flex min-h-screen items-center justify-center bg-white">
         <div className="w-full max-w-md px-6 space-y-4">
           <div className="text-center">
-            <h2 className="text-2xl font-semibold mb-2">Etkinliğe Katıl</h2>
-            <p className="text-muted-foreground">Katılmak için adınızı girin ve onayları kabul edin</p>
+            <h2 className="text-2xl font-semibold mb-2">{t('joinTitle')}</h2>
+            <p className="text-muted-foreground">{t('joinSubtitle')}</p>
           </div>
           <form onSubmit={handleUsernameSubmit} className="space-y-4">
             {error && (
@@ -776,7 +819,7 @@ export default function EventPage() {
             )}
             <Input
               type="text"
-              placeholder="Adınız"
+              placeholder={t('usernamePlaceholder')}
               value={username}
               onChange={(e) => {
                 setUsername(e.target.value)
@@ -796,7 +839,7 @@ export default function EventPage() {
                   className="mt-1"
                 />
                 <label htmlFor="gdpr" className="text-sm leading-relaxed cursor-pointer">
-                  GDPR veri koruma politikasını kabul ediyorum
+                  {t('consents.gdpr')}
                 </label>
               </div>
               
@@ -809,7 +852,7 @@ export default function EventPage() {
                   className="mt-1"
                 />
                 <label htmlFor="policy" className="text-sm leading-relaxed cursor-pointer">
-                  Kullanım şartlarını ve gizlilik politikasını kabul ediyorum
+                  {t('consents.policy')}
                 </label>
               </div>
               
@@ -822,7 +865,7 @@ export default function EventPage() {
                   className="mt-1"
                 />
                 <label htmlFor="cookie" className="text-sm leading-relaxed cursor-pointer">
-                  Çerez kullanımını kabul ediyorum
+                  {t('consents.cookie')}
                 </label>
               </div>
               
@@ -835,7 +878,7 @@ export default function EventPage() {
                   className="mt-1"
                 />
                 <label htmlFor="event-data" className="text-sm leading-relaxed cursor-pointer">
-                  Etkinlik ile ilgili verilerimin paylaşılmasını kabul ediyorum
+                  {t('consents.eventData')}
                 </label>
               </div>
             </div>
@@ -845,7 +888,7 @@ export default function EventPage() {
               className="w-full" 
               disabled={!username.trim() || isLoading || !event || !gdprConsent || !policyConsent || !cookieConsent || !eventDataConsent}
             >
-              {isLoading ? 'Katılıyor...' : 'Katıl'}
+              {isLoading ? tCommon('joining') : t('joinButton')}
             </Button>
           </form>
         </div>
@@ -857,7 +900,7 @@ export default function EventPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-white">
         <div className="text-center">
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground">{tCommon('loading')}</p>
         </div>
       </div>
     )
@@ -866,16 +909,43 @@ export default function EventPage() {
   return (
     <EventTheme mode={event.event_mode}>
       <div className="min-h-screen flex flex-col">
+        {/* Language Switcher */}
+        <div className="absolute top-4 right-4 z-20">
+          <LanguageSwitcher />
+        </div>
+        
         <div className="flex-1 overflow-y-auto p-4 pb-32">
           <div className="max-w-2xl mx-auto">
             <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
-                <h1 className="text-2xl font-semibold">{event.title}</h1>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-2xl font-semibold">{event.title}</h1>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className={`h-8 w-8 transition-all duration-300 ${
+                      isRefreshing 
+                        ? 'opacity-50 cursor-not-allowed' 
+                        : refreshSuccess 
+                        ? 'text-green-500 opacity-100' 
+                        : 'opacity-70 hover:opacity-100'
+                    }`}
+                    title={isRefreshing ? t('feed.refreshing') : t('feed.refresh')}
+                  >
+                    <RefreshCw 
+                      className={`h-4 w-4 transition-all ${
+                        isRefreshing ? 'animate-spin' : refreshSuccess ? 'text-green-500' : ''
+                      }`} 
+                    />
+                  </Button>
+                </div>
                 <Badge variant="secondary" className="text-sm">
-                  {notes.length} {notes.length === 1 ? 'message' : 'messages'}
+                  {notes.length} {notes.length === 1 ? tCommon('message') : tCommon('messages')}
                 </Badge>
               </div>
-              <p className="text-sm text-muted-foreground">Event Code: {event.event_code}</p>
+              <p className="text-sm text-muted-foreground">{t('eventCode')}: {event.event_code}</p>
             </div>
 
             <HostAnnouncement eventCode={event.event_code} />
@@ -895,7 +965,7 @@ export default function EventPage() {
             <div className="flex gap-2">
               <Input
                 type="text"
-                placeholder="Share your thoughts..."
+                placeholder={t('feed.sharePlaceholder')}
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value)}
                 onKeyPress={(e) => {
@@ -911,7 +981,7 @@ export default function EventPage() {
                 onClick={handleSubmitText}
                 disabled={!textInput.trim() || isSubmitting}
               >
-                Send
+                {tCommon('send')}
               </Button>
             </div>
 
@@ -931,7 +1001,7 @@ export default function EventPage() {
                     size="icon"
                     onClick={() => handleSubmitEmotion(emotion.emoji)}
                     disabled={isSubmitting}
-                    title={emotion.label}
+                    title={tEmotions(emotion.label.toLowerCase())}
                   >
                     <span className="text-xl">{emotion.emoji}</span>
                   </Button>

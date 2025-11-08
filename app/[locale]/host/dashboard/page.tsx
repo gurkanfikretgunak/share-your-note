@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations, useLocale } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { LanguageSwitcher } from '@/components/language-switcher'
 import { createClient } from '@/lib/supabase'
 import { EventMode, NoteWithParticipant, Event } from '@/types/database.types'
 import { QRCodeSVG } from 'qrcode.react'
@@ -26,7 +28,13 @@ interface UserWithProfile {
 
 export default function HostDashboard() {
   const router = useRouter()
+  const locale = useLocale()
   const supabase = createClient()
+  const t = useTranslations('host')
+  const tCommon = useTranslations('common')
+  const tEvent = useTranslations('host.event')
+  const tFeed = useTranslations('host.feed')
+  const tCreate = useTranslations('host.createEvent')
   const [user, setUser] = useState<UserWithProfile | null>(null)
   const [currentEvent, setCurrentEvent] = useState<Event | null>(null)
   const [notes, setNotes] = useState<NoteWithParticipant[]>([])
@@ -66,7 +74,7 @@ export default function HostDashboard() {
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
-      router.push('/auth/login')
+      router.push(`/${locale}/auth/login`)
       return
     }
     setUser(session.user)
@@ -141,8 +149,8 @@ export default function HostDashboard() {
               
               // Update stats
               const totalMessages = sorted.length
-              const totalLikes = sorted.reduce((sum, note) => sum + (note.like_count || 0), 0)
-              const imageMessages = sorted.filter((note) => note.content_type === 'image').length
+              const totalLikes = sorted.reduce((sum: number, note: NoteWithParticipant) => sum + (note.like_count || 0), 0)
+              const imageMessages = sorted.filter((note: NoteWithParticipant) => note.content_type === 'image').length
               setStats({ totalMessages, totalLikes, imageMessages })
               
               return sorted
@@ -181,8 +189,8 @@ export default function HostDashboard() {
             
             // Update stats
             const totalMessages = updated.length
-            const totalLikes = updated.reduce((sum, note) => sum + (note.like_count || 0), 0)
-            const imageMessages = updated.filter((note) => note.content_type === 'image').length
+            const totalLikes = updated.reduce((sum: number, note: NoteWithParticipant) => sum + (note.like_count || 0), 0)
+            const imageMessages = updated.filter((note: NoteWithParticipant) => note.content_type === 'image').length
             setStats({ totalMessages, totalLikes, imageMessages })
             
             return updated
@@ -220,8 +228,8 @@ export default function HostDashboard() {
             
             // Update stats
             const totalMessages = updated.length
-            const totalLikes = updated.reduce((sum, note) => sum + (note.like_count || 0), 0)
-            const imageMessages = updated.filter((note) => note.content_type === 'image').length
+            const totalLikes = updated.reduce((sum: number, note: NoteWithParticipant) => sum + (note.like_count || 0), 0)
+            const imageMessages = updated.filter((note: NoteWithParticipant) => note.content_type === 'image').length
             setStats({ totalMessages, totalLikes, imageMessages })
             
             return updated
@@ -319,8 +327,8 @@ export default function HostDashboard() {
 
     // Calculate statistics
     const totalMessages = sortedNotes.length
-    const totalLikes = sortedNotes.reduce((sum, note) => sum + (note.like_count || 0), 0)
-    const imageMessages = sortedNotes.filter((note) => note.content_type === 'image').length
+    const totalLikes = sortedNotes.reduce((sum: number, note: NoteWithParticipant) => sum + (note.like_count || 0), 0)
+    const imageMessages = sortedNotes.filter((note: NoteWithParticipant) => note.content_type === 'image').length
 
     setStats({
       totalMessages,
@@ -385,7 +393,7 @@ export default function HostDashboard() {
       setIsDialogOpen(false)
     } catch (err) {
       const error = err as Error
-      alert('Failed to create event: ' + error.message)
+      alert(tCreate('error') + ': ' + error.message)
     } finally {
       setIsCreatingEvent(false)
     }
@@ -400,7 +408,7 @@ export default function HostDashboard() {
       .eq('id', currentEvent.id)
 
     if (error) {
-      alert('Failed to start event: ' + error.message)
+      alert(t('errors.startFailed') + ': ' + error.message)
       return
     }
 
@@ -416,7 +424,7 @@ export default function HostDashboard() {
       .eq('id', currentEvent.id)
 
     if (error) {
-      alert('Failed to pause event: ' + error.message)
+      alert(t('errors.pauseFailed') + ': ' + error.message)
       return
     }
 
@@ -426,7 +434,7 @@ export default function HostDashboard() {
   const handleEndEvent = async () => {
     if (!currentEvent) return
 
-    if (!confirm('Are you sure you want to end this event? This action cannot be undone.')) {
+    if (!confirm(tEvent('endConfirm'))) {
       return
     }
 
@@ -436,7 +444,7 @@ export default function HostDashboard() {
       .eq('id', currentEvent.id)
 
     if (error) {
-      alert('Failed to end event: ' + error.message)
+      alert(t('errors.endFailed') + ': ' + error.message)
       return
     }
 
@@ -457,7 +465,7 @@ export default function HostDashboard() {
   }
 
   const handleDeleteNote = async (noteId: string) => {
-    if (!confirm('Bu mesajı silmek istediğinizden emin misiniz?')) {
+    if (!confirm(tFeed('deleteConfirm'))) {
       return
     }
 
@@ -469,7 +477,7 @@ export default function HostDashboard() {
         .eq('id', noteId)
 
       if (error) {
-        alert('Mesaj silinirken hata oluştu: ' + error.message)
+        alert(tFeed('deleteError') + ': ' + error.message)
         return
       }
 
@@ -479,15 +487,15 @@ export default function HostDashboard() {
         
         // Update stats
         const totalMessages = updated.length
-        const totalLikes = updated.reduce((sum, note) => sum + (note.like_count || 0), 0)
-        const imageMessages = updated.filter((note) => note.content_type === 'image').length
+        const totalLikes = updated.reduce((sum: number, note: NoteWithParticipant) => sum + (note.like_count || 0), 0)
+        const imageMessages = updated.filter((note: NoteWithParticipant) => note.content_type === 'image').length
         setStats({ totalMessages, totalLikes, imageMessages })
         
         return updated
       })
     } catch (err) {
       const error = err as Error
-      alert('Mesaj silinirken hata oluştu: ' + error.message)
+      alert(tFeed('deleteError') + ': ' + error.message)
     } finally {
       setDeletingNoteId(null)
     }
@@ -513,7 +521,7 @@ export default function HostDashboard() {
       .eq('id', currentEvent.id)
 
     if (error) {
-      alert('Başlık güncellenirken hata oluştu: ' + error.message)
+      alert(tEvent('titleUpdateError') + ': ' + error.message)
       return
     }
 
@@ -530,7 +538,7 @@ export default function HostDashboard() {
         .eq('id', noteId)
 
       if (error) {
-        alert('Favori durumu güncellenirken hata oluştu: ' + error.message)
+        alert(tFeed('favoriteError') + ': ' + error.message)
         return
       }
 
@@ -542,19 +550,19 @@ export default function HostDashboard() {
       )
     } catch (err) {
       const error = err as Error
-      alert('Favori durumu güncellenirken hata oluştu: ' + error.message)
+      alert(tFeed('favoriteError') + ': ' + error.message)
     }
   }
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    router.push('/')
+    router.push(`/${locale}`)
   }
 
   if (!user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-white">
-        <p className="text-muted-foreground">Loading...</p>
+        <p className="text-muted-foreground">{t('loading')}</p>
       </div>
     )
   }
@@ -563,11 +571,14 @@ export default function HostDashboard() {
     <div className="min-h-screen bg-white">
       <div className="border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-semibold">Host Dashboard</h1>
-          <Button variant="outline" onClick={handleLogout}>
-            <LogOut className="mr-2 h-4 w-4" />
-            Logout
-          </Button>
+          <h1 className="text-2xl font-semibold">{t('dashboard')}</h1>
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher />
+            <Button variant="outline" onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              {tCommon('logout')}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -575,30 +586,30 @@ export default function HostDashboard() {
         {!currentEvent ? (
           <div className="max-w-md mx-auto text-center space-y-6 py-12">
             <div className="space-y-2">
-              <h2 className="text-2xl font-semibold text-gray-900">Henüz Etkinlik Yok</h2>
-              <p className="text-muted-foreground">Başlamak için yeni bir etkinlik oluşturun</p>
+              <h2 className="text-2xl font-semibold text-gray-900">{t('noEvent.title')}</h2>
+              <p className="text-muted-foreground">{t('noEvent.subtitle')}</p>
             </div>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button size="lg" className="shadow-sm">
-                  Yeni Etkinlik Oluştur
+                  {t('noEvent.createButton')}
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                  <DialogTitle className="text-2xl">Yeni Etkinlik Oluştur</DialogTitle>
+                  <DialogTitle className="text-2xl">{tCreate('title')}</DialogTitle>
                   <DialogDescription>
-                    Katılımcıların katılabileceği yeni bir etkinlik oluşturun. Etkinlik kodu otomatik olarak oluşturulacaktır.
+                    {tCreate('description')}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-6 py-4">
                   <div className="space-y-2">
                     <label htmlFor="event-title" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                      Etkinlik Başlığı
+                      {tCreate('eventTitle')}
                     </label>
                     <Input
                       id="event-title"
-                      placeholder="Örn: Yılbaşı Partisi"
+                      placeholder={tCreate('eventTitlePlaceholder')}
                       value={newEventTitle}
                       onChange={(e) => setNewEventTitle(e.target.value)}
                       className="h-10"
@@ -611,16 +622,16 @@ export default function HostDashboard() {
                   </div>
                   <div className="space-y-2">
                     <label htmlFor="event-mode" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                      Etkinlik Modu
+                      {tCreate('eventMode')}
                     </label>
                     <Select value={newEventMode} onValueChange={(value) => setNewEventMode(value as EventMode)}>
                       <SelectTrigger id="event-mode" className="h-10">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="general">Genel</SelectItem>
-                        <SelectItem value="birthday">Doğum Günü</SelectItem>
-                        <SelectItem value="party">Parti</SelectItem>
+                        <SelectItem value="general">{tCreate('modes.general')}</SelectItem>
+                        <SelectItem value="birthday">{tCreate('modes.birthday')}</SelectItem>
+                        <SelectItem value="party">{tCreate('modes.party')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -631,14 +642,14 @@ export default function HostDashboard() {
                     onClick={() => setIsDialogOpen(false)}
                     disabled={isCreatingEvent}
                   >
-                    İptal
+                    {tCreate('cancel')}
                   </Button>
                   <Button 
                     onClick={handleCreateEvent} 
                     disabled={!newEventTitle.trim() || isCreatingEvent}
                     className="min-w-[100px]"
                   >
-                    {isCreatingEvent ? 'Oluşturuluyor...' : 'Oluştur'}
+                    {isCreatingEvent ? tCreate('creating') : tCreate('create')}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -696,32 +707,32 @@ export default function HostDashboard() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <p className="text-sm text-muted-foreground mb-2">Event Code</p>
+                    <p className="text-sm text-muted-foreground mb-2">{tEvent('eventCode')}</p>
                     <p className="text-2xl font-mono font-bold">{currentEvent.event_code}</p>
                   </div>
 
                   <div className="flex justify-center p-4 bg-white rounded-lg border">
                     <QRCodeSVG
-                      value={`${typeof window !== 'undefined' ? window.location.origin : ''}/event/${currentEvent.event_code}`}
+                      value={`${typeof window !== 'undefined' ? window.location.origin : ''}/${locale}/event/${currentEvent.event_code}`}
                       size={200}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Status: <span className="font-medium capitalize">{currentEvent.status}</span></p>
+                    <p className="text-sm text-muted-foreground">{tEvent('status')}: <span className="font-medium capitalize">{tEvent(`statuses.${currentEvent.status}`)}</span></p>
                     <div className="flex flex-col gap-2">
                       {currentEvent.status === 'pending' && (
                         <Button onClick={handleStartEvent} className="w-full">
-                          Etkinliği Başlat
+                          {tEvent('start')}
                         </Button>
                       )}
                       {currentEvent.status === 'active' && (
                         <>
                           <Button onClick={handlePauseEvent} variant="outline" className="w-full">
-                            Etkinliği Duraklat
+                            {tEvent('pause')}
                           </Button>
                           <Button onClick={handleEndEvent} variant="destructive" className="w-full">
-                            Etkinliği Bitir
+                            {tEvent('end')}
                           </Button>
                         </>
                       )}
@@ -729,11 +740,11 @@ export default function HostDashboard() {
                         <>
                           <div className="bg-muted/50 rounded-lg p-3 mb-2">
                             <p className="text-sm text-muted-foreground text-center">
-                              Bu etkinlik sona erdi
+                              {tEvent('finished')}
                             </p>
                           </div>
                           <Button onClick={handleStartEvent} className="w-full">
-                            Etkinliği Tekrar Başlat
+                            {tEvent('restart')}
                           </Button>
                         </>
                       )}
@@ -741,10 +752,10 @@ export default function HostDashboard() {
                   </div>
 
                   <div className="space-y-2">
-                    <p className="text-sm font-medium">Send Announcement</p>
+                    <p className="text-sm font-medium">{tEvent('announcement')}</p>
                     <div className="flex gap-2">
                       <Input
-                        placeholder="Announcement message..."
+                        placeholder={tEvent('announcementPlaceholder')}
                         value={announcementText}
                         onChange={(e) => setAnnouncementText(e.target.value)}
                         onKeyPress={(e) => {
@@ -765,12 +776,12 @@ export default function HostDashboard() {
             <div className="lg:col-span-2">
               <Card>
                 <CardHeader>
-                  <CardTitle>Attendee Feed</CardTitle>
+                  <CardTitle>{tFeed('title')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {notes.length === 0 ? (
                     <div className="text-center text-muted-foreground py-12">
-                      No notes yet. Share the event code with attendees!
+                      {tFeed('noNotes')}
                     </div>
                   ) : (
                     <>
@@ -783,7 +794,7 @@ export default function HostDashboard() {
                                 <MessageSquare className="h-5 w-5 text-blue-600" />
                               </div>
                               <div>
-                                <p className="text-sm text-muted-foreground">Toplam Mesaj</p>
+                                <p className="text-sm text-muted-foreground">{tFeed('stats.totalMessages')}</p>
                                 <p className="text-2xl font-bold">{stats.totalMessages}</p>
                               </div>
                             </div>
@@ -796,7 +807,7 @@ export default function HostDashboard() {
                                 <Heart className="h-5 w-5 text-red-600 fill-red-600" />
                               </div>
                               <div>
-                                <p className="text-sm text-muted-foreground">Toplam Beğeni</p>
+                                <p className="text-sm text-muted-foreground">{tFeed('stats.totalLikes')}</p>
                                 <p className="text-2xl font-bold">{stats.totalLikes}</p>
                               </div>
                             </div>
@@ -809,7 +820,7 @@ export default function HostDashboard() {
                                 <ImageIcon className="h-5 w-5 text-purple-600" />
                               </div>
                               <div>
-                                <p className="text-sm text-muted-foreground">Görsel Mesaj</p>
+                                <p className="text-sm text-muted-foreground">{tFeed('stats.imageMessages')}</p>
                                 <p className="text-2xl font-bold">{stats.imageMessages}</p>
                               </div>
                             </div>
@@ -847,7 +858,7 @@ export default function HostDashboard() {
                                       variant="ghost"
                                       className={`h-7 w-7 ${note.is_favorited ? 'text-yellow-500 hover:text-yellow-600 hover:bg-yellow-100' : 'text-muted-foreground hover:text-yellow-500'}`}
                                       onClick={() => handleToggleFavorite(note.id, note.is_favorited || false)}
-                                      title={note.is_favorited ? 'Favorilerden Çıkar' : 'Favorilere Ekle'}
+                                      title={note.is_favorited ? tFeed('unfavoriteTitle') : tFeed('favoriteTitle')}
                                     >
                                       <Star className={`h-3.5 w-3.5 ${note.is_favorited ? 'fill-current' : ''}`} />
                                     </Button>
@@ -857,7 +868,7 @@ export default function HostDashboard() {
                                       className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
                                       onClick={() => handleDeleteNote(note.id)}
                                       disabled={deletingNoteId === note.id}
-                                      title="Mesajı Sil"
+                                      title={tFeed('deleteTitle')}
                                     >
                                       <Trash2 className="h-3.5 w-3.5" />
                                     </Button>
@@ -883,7 +894,7 @@ export default function HostDashboard() {
                                 {(note.like_count !== undefined && note.like_count > 0) && (
                                   <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
                                     <Heart className="h-3.5 w-3.5 fill-red-500 text-red-500" />
-                                    <span>{note.like_count} beğeni</span>
+                                    <span>{note.like_count} {tCommon('likes')}</span>
                                   </div>
                                 )}
                               </div>

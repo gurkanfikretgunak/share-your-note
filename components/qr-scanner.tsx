@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { useTranslations } from 'next-intl'
 
 interface QRScannerProps {
   open: boolean
@@ -16,6 +17,8 @@ export function QRScanner({ open, onClose, onScan }: QRScannerProps) {
   const [error, setError] = useState<string | null>(null)
   const [isInitializing, setIsInitializing] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const t = useTranslations('qr')
+  const tCommon = useTranslations('common')
 
   useEffect(() => {
     if (!open) {
@@ -44,7 +47,7 @@ export function QRScanner({ open, onClose, onScan }: QRScannerProps) {
       // Check if element exists
       const element = document.getElementById(elementId)
       if (!element) {
-        setError('QR scanner container not found')
+        setError(t('errors.containerNotFound'))
         setIsInitializing(false)
         return
       }
@@ -82,7 +85,7 @@ export function QRScanner({ open, onClose, onScan }: QRScannerProps) {
             // Error callback - this is called during scanning, not initialization
             // Only show error if it's a permission error
             if (errorMessage.includes('Permission') || errorMessage.includes('permission')) {
-              setError('Camera permission denied. Please allow camera access and try again.')
+              setError(t('errors.permissionDenied'))
               setIsInitializing(false)
             }
             // Other errors are normal during scanning, ignore them
@@ -96,11 +99,11 @@ export function QRScanner({ open, onClose, onScan }: QRScannerProps) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error'
         
         if (errorMessage.includes('Permission') || errorMessage.includes('permission')) {
-          setError('Camera permission denied. Please allow camera access in your browser settings and try again.')
+          setError(t('errors.permissionDeniedSettings'))
         } else if (errorMessage.includes('NotFoundError') || errorMessage.includes('No camera')) {
-          setError('No camera found. Please connect a camera and try again.')
+          setError(t('errors.noCamera'))
         } else {
-          setError('Failed to initialize QR scanner. Please check your camera permissions and try again.')
+          setError(t('errors.initFailed'))
         }
         setIsInitializing(false)
       }
@@ -138,12 +141,12 @@ export function QRScanner({ open, onClose, onScan }: QRScannerProps) {
     }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>QR Kodunu Tara</DialogTitle>
+          <DialogTitle>{t('title')}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           {isInitializing && !error && (
             <div className="text-center py-8">
-              <p className="text-sm text-muted-foreground">Kamera başlatılıyor...</p>
+              <p className="text-sm text-muted-foreground">{t('initializing')}</p>
             </div>
           )}
           {error ? (
@@ -152,11 +155,11 @@ export function QRScanner({ open, onClose, onScan }: QRScannerProps) {
                 {error}
               </div>
               <div className="text-xs text-muted-foreground space-y-1">
-                <p>İpuçları:</p>
+                <p>{t('tips.title')}</p>
                 <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li>Bu web sitesine kamera izni verdiğinizden emin olun</li>
-                  <li>İzinler reddedildiyse tarayıcı ayarlarınızı kontrol edin</li>
-                  <li>Sayfayı yenileyin ve kamera erişimine izin verin</li>
+                  <li>{t('tips.permission')}</li>
+                  <li>{t('tips.settings')}</li>
+                  <li>{t('tips.refresh')}</li>
                 </ul>
               </div>
             </div>
@@ -181,7 +184,7 @@ export function QRScanner({ open, onClose, onScan }: QRScannerProps) {
             variant="outline" 
             className="w-full"
           >
-            {error ? 'Kapat' : 'İptal'}
+            {error ? tCommon('close') : tCommon('cancel')}
           </Button>
         </div>
       </DialogContent>

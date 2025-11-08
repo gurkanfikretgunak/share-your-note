@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { NoteWithParticipant } from '@/types/database.types'
 import { formatDistanceToNow } from 'date-fns'
 import { Star, Heart } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 interface EventFeedProps {
   notes: NoteWithParticipant[]
@@ -17,6 +18,8 @@ interface EventFeedProps {
 export function EventFeed({ notes, onToggleLike }: EventFeedProps) {
   const prevNotesLengthRef = useRef(notes.length)
   const firstNoteRef = useRef<HTMLDivElement>(null)
+  const t = useTranslations('event.feed')
+  const tCommon = useTranslations('common')
 
   useEffect(() => {
     // If a new note was added (length increased), scroll to top
@@ -30,7 +33,7 @@ export function EventFeed({ notes, onToggleLike }: EventFeedProps) {
   if (notes.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-12">
-        No notes yet. Be the first to share!
+        {t('noNotes')}
       </div>
     )
   }

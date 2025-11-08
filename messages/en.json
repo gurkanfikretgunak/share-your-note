@@ -1,0 +1,212 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "ok": "OK",
+    "send": "Send",
+    "join": "Join",
+    "joining": "Joining...",
+    "back": "Back",
+    "home": "Home",
+    "logout": "Logout",
+    "yes": "Yes",
+    "no": "No",
+    "confirm": "Confirm",
+    "share": "Share",
+    "like": "Like",
+    "unlike": "Unlike",
+    "favorite": "Favorite",
+    "unfavorite": "Remove from Favorites",
+    "favorited": "Favorited",
+    "likes": "likes",
+    "messages": "messages",
+    "message": "message"
+  },
+  "home": {
+    "title": "Share Your Note",
+    "subtitle": "Join an event to share your thoughts",
+    "modes": {
+      "general": "General",
+      "birthday": "Birthday",
+      "party": "Party"
+    },
+    "eventCodePlaceholder": "Enter Event Code (e.g., ABC123)",
+    "joinButton": "Join",
+    "joinWithQR": "Join with QR Code",
+    "hostPrompt": "Are you a host?",
+    "goToDashboard": "Go to Dashboard",
+    "errors": {
+      "enterCode": "Please enter an event code",
+      "invalidCode": "Invalid event code. Please check and try again.",
+      "eventEnded": "This event has ended.",
+      "eventPending": "This event has not started yet. Please wait for the host to start the event.",
+      "somethingWrong": "Something went wrong. Please try again."
+    }
+  },
+  "event": {
+    "loading": "Loading event...",
+    "notFound": "Event Not Found",
+    "eventCode": "Event Code",
+    "joinTitle": "Join Event",
+    "joinSubtitle": "Enter your name and accept the consents to join",
+    "usernamePlaceholder": "Your name",
+    "joinButton": "Join",
+    "consents": {
+      "gdpr": "I accept the GDPR data protection policy",
+      "policy": "I accept the terms of use and privacy policy",
+      "cookie": "I accept cookie usage",
+      "eventData": "I accept sharing of my event-related data",
+      "allRequired": "Please accept all consents"
+    },
+    "finished": {
+      "title": "Event Finished",
+      "message": "This event has ended. Thank you for participating!",
+      "backToHome": "Back to Home"
+    },
+    "feed": {
+      "noNotes": "No notes yet. Be the first to share!",
+      "sharePlaceholder": "Share your thoughts...",
+      "participantJoined": "{username} joined the event!",
+      "refresh": "Refresh",
+      "refreshing": "Refreshing...",
+      "emotions": {
+        "happy": "Happy",
+        "love": "Love",
+        "like": "Like",
+        "celebrate": "Celebrate"
+      }
+    },
+    "errors": {
+      "notFound": "Event not found",
+      "failedToLoad": "Failed to load event",
+      "failedToJoin": "Failed to join event",
+      "failedToSubmit": "Failed to submit",
+      "failedToLike": "Failed to toggle like",
+      "eventPending": "This event has not started yet. Please wait for the host to start the event."
+    }
+  },
+  "host": {
+    "dashboard": "Host Dashboard",
+    "loading": "Loading...",
+    "noEvent": {
+      "title": "No Event Yet",
+      "subtitle": "Create a new event to get started",
+      "createButton": "Create New Event"
+    },
+    "createEvent": {
+      "title": "Create New Event",
+      "description": "Create a new event that participants can join. The event code will be generated automatically.",
+      "eventTitle": "Event Title",
+      "eventTitlePlaceholder": "e.g., New Year Party",
+      "eventMode": "Event Mode",
+      "modes": {
+        "general": "General",
+        "birthday": "Birthday",
+        "party": "Party"
+      },
+      "cancel": "Cancel",
+      "create": "Create",
+      "creating": "Creating...",
+      "error": "Failed to create event"
+    },
+    "event": {
+      "eventCode": "Event Code",
+      "status": "Status",
+      "statuses": {
+        "pending": "Pending",
+        "active": "Active",
+        "finished": "Finished"
+      },
+      "start": "Start Event",
+      "pause": "Pause Event",
+      "end": "End Event",
+      "restart": "Restart Event",
+      "endConfirm": "Are you sure you want to end this event? This action cannot be undone.",
+      "finished": "This event has ended",
+      "announcement": "Send Announcement",
+      "announcementPlaceholder": "Announcement message...",
+      "editTitle": "Edit Title",
+      "titleUpdateError": "Failed to update title"
+    },
+    "feed": {
+      "title": "Attendee Feed",
+      "noNotes": "No notes yet. Share the event code with attendees!",
+      "stats": {
+        "totalMessages": "Total Messages",
+        "totalLikes": "Total Likes",
+        "imageMessages": "Image Messages"
+      },
+      "deleteConfirm": "Are you sure you want to delete this message?",
+      "deleteError": "Failed to delete message",
+      "favoriteError": "Failed to update favorite status",
+      "deleteTitle": "Delete Message",
+      "favoriteTitle": "Add to Favorites",
+      "unfavoriteTitle": "Remove from Favorites"
+    },
+    "errors": {
+      "startFailed": "Failed to start event",
+      "pauseFailed": "Failed to pause event",
+      "endFailed": "Failed to end event"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Host Login",
+      "subtitle": "Sign in to manage your events",
+      "email": "Email",
+      "emailPlaceholder": "you@example.com",
+      "password": "Password",
+      "passwordPlaceholder": "••••••••",
+      "signIn": "Sign In",
+      "signingIn": "Signing in...",
+      "noAccount": "Don't have an account?",
+      "signUp": "Sign up",
+      "backToHome": "Back to home",
+      "error": "Failed to sign in"
+    },
+    "signup": {
+      "title": "Host Sign Up",
+      "subtitle": "Create an account to host events",
+      "username": "Username",
+      "usernamePlaceholder": "Your username",
+      "email": "Email",
+      "emailPlaceholder": "you@example.com",
+      "password": "Password",
+      "passwordPlaceholder": "••••••••",
+      "signUp": "Sign Up",
+      "creating": "Creating account...",
+      "hasAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "backToHome": "Back to home",
+      "error": "Failed to sign up"
+    }
+  },
+  "qr": {
+    "title": "Scan QR Code",
+    "initializing": "Initializing camera...",
+    "tips": {
+      "title": "Tips:",
+      "permission": "Make sure you've granted camera permission to this website",
+      "settings": "If permissions were denied, check your browser settings",
+      "refresh": "Refresh the page and allow camera access"
+    },
+    "errors": {
+      "containerNotFound": "QR scanner container not found",
+      "permissionDenied": "Camera permission denied. Please allow camera access and try again.",
+      "permissionDeniedSettings": "Camera permission denied. Please allow camera access in your browser settings and try again.",
+      "noCamera": "No camera found. Please connect a camera and try again.",
+      "initFailed": "Failed to initialize QR scanner. Please check your camera permissions and try again."
+    }
+  },
+  "announcement": {
+    "title": "Host Announcement",
+    "description": "The host has sent an important message",
+    "cardTitle": "Host Announcement"
+  }
+}
+

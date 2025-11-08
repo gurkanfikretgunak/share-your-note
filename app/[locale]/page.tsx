@@ -1,10 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
+import { useTranslations, useLocale } from 'next-intl'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { QRScanner } from '@/components/qr-scanner'
+import { LanguageSwitcher } from '@/components/language-switcher'
 import { QrCode, Cake, PartyPopper, Sparkles } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import Confetti from 'react-confetti'
@@ -19,6 +21,10 @@ export default function Home() {
   const [showConfetti, setShowConfetti] = useState(false)
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
   const router = useRouter()
+  const pathname = usePathname()
+  const locale = useLocale()
+  const t = useTranslations('home')
+  const tCommon = useTranslations('common')
   const supabase = createClient()
 
   useEffect(() => {
@@ -42,7 +48,7 @@ export default function Home() {
 
   const handleJoin = async () => {
     if (!eventCode.trim()) {
-      setError('Please enter an event code')
+      setError(t('errors.enterCode'))
       return
     }
 
@@ -60,27 +66,27 @@ export default function Home() {
         .single()
 
       if (eventError || !event) {
-        setError('Invalid event code. Please check and try again.')
+        setError(t('errors.invalidCode'))
         setIsLoading(false)
         return
       }
 
       if (event.status === 'finished') {
-        setError('This event has ended.')
+        setError(t('errors.eventEnded'))
         setIsLoading(false)
         return
       }
 
       if (event.status === 'pending') {
-        setError('Bu etkinlik henüz başlamadı. Lütfen host\'un etkinliği başlatmasını bekleyin.')
+        setError(t('errors.eventPending'))
         setIsLoading(false)
         return
       }
 
-      // Redirect to event page
-      router.push(`/event/${code}`)
+      // Redirect to event page with locale
+      router.push(`/${locale}/event/${code}`)
     } catch {
-      setError('Something went wrong. Please try again.')
+      setError(t('errors.somethingWrong'))
       setIsLoading(false)
     }
   }
@@ -104,27 +110,27 @@ export default function Home() {
           .single()
 
         if (eventError || !event) {
-          setError('Invalid event code. Please check and try again.')
+          setError(t('errors.invalidCode'))
           setIsLoading(false)
           return
         }
 
         if (event.status === 'finished') {
-          setError('This event has ended.')
+          setError(t('errors.eventEnded'))
           setIsLoading(false)
           return
         }
 
         if (event.status === 'pending') {
-          setError('Bu etkinlik henüz başlamadı. Lütfen host\'un etkinliği başlatmasını bekleyin.')
+          setError(t('errors.eventPending'))
           setIsLoading(false)
           return
         }
 
-        // Redirect to event page
-        router.push(`/event/${eventCodeValue}`)
+        // Redirect to event page with locale
+        router.push(`/${locale}/event/${eventCodeValue}`)
       } catch {
-        setError('Something went wrong. Please try again.')
+        setError(t('errors.somethingWrong'))
         setIsLoading(false)
       }
     }
@@ -148,7 +154,7 @@ export default function Home() {
   }
 
   return (
-    <div className={`flex min-h-screen items-center justify-center ${getBackgroundClass()} relative overflow-hidden`}>
+    <div className={`flex min-h-screen flex-col ${getBackgroundClass()} relative overflow-hidden`}>
       {/* Confetti Effect */}
       {showConfetti && (selectedMode === 'birthday' || selectedMode === 'party') && (
         <Confetti
@@ -382,109 +388,120 @@ export default function Home() {
         </>
       )}
 
-      <main className="flex w-full max-w-md flex-col items-center gap-8 px-6 py-12 relative z-10">
-        {/* Mode Toggle Buttons */}
-        <div className="flex gap-2 p-1 bg-white/80 backdrop-blur-sm rounded-lg border shadow-sm">
-          <Button
-            variant={selectedMode === 'general' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setSelectedMode('general')}
-            className="gap-2"
-          >
-            <Sparkles className="h-4 w-4" />
-            Genel
-          </Button>
-          <Button
-            variant={selectedMode === 'birthday' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setSelectedMode('birthday')}
-            className="gap-2"
-          >
-            <Cake className="h-4 w-4" />
-            Birthday
-          </Button>
-          <Button
-            variant={selectedMode === 'party' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setSelectedMode('party')}
-            className="gap-2"
-          >
-            <PartyPopper className="h-4 w-4" />
-            Party
-          </Button>
-        </div>
-
-        <div className="text-center">
-          <h1 className={`text-4xl font-semibold tracking-tight mb-2 ${
-            selectedMode === 'birthday' ? 'text-pink-600' :
-            selectedMode === 'party' ? 'text-purple-600' :
-            'text-foreground'
-          }`}>
-            Share Your Note
-          </h1>
-          <p className="text-muted-foreground">
-            Join an event to share your thoughts
-          </p>
-        </div>
-
-        <div className="w-full space-y-4">
-          <div className="space-y-2">
-            <Input
-              type="text"
-              placeholder="Enter Event Code (e.g., ABC123)"
-              value={eventCode}
-              onChange={(e) => {
-                setEventCode(e.target.value.toUpperCase())
-                setError(null)
-              }}
-              onKeyPress={handleKeyPress}
-              maxLength={6}
-              className="text-center text-lg tracking-widest uppercase bg-white"
-              disabled={isLoading}
-            />
-            {error && (
-              <p className="text-sm text-destructive text-center">{error}</p>
-            )}
+      <main className="flex-1 flex items-center justify-center w-full px-6 py-12 relative z-10">
+        <div className="w-full max-w-md flex flex-col items-center gap-8">
+          {/* Language Switcher */}
+          <div className="absolute top-4 right-4 z-20">
+            <LanguageSwitcher />
           </div>
 
-          <Button
-            onClick={handleJoin}
-            disabled={isLoading}
-            className="w-full"
-            size="lg"
-          >
-            {isLoading ? 'Joining...' : 'Join'}
-          </Button>
+          {/* Mode Toggle Buttons */}
+          <div className="flex gap-2 p-1 bg-white/80 backdrop-blur-sm rounded-lg border shadow-sm">
+            <Button
+              variant={selectedMode === 'general' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setSelectedMode('general')}
+              className="gap-2"
+            >
+              <Sparkles className="h-4 w-4" />
+              {t('modes.general')}
+            </Button>
+            <Button
+              variant={selectedMode === 'birthday' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setSelectedMode('birthday')}
+              className="gap-2"
+            >
+              <Cake className="h-4 w-4" />
+              {t('modes.birthday')}
+            </Button>
+            <Button
+              variant={selectedMode === 'party' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setSelectedMode('party')}
+              className="gap-2"
+            >
+              <PartyPopper className="h-4 w-4" />
+              {t('modes.party')}
+            </Button>
+          </div>
 
-          <Button
-            onClick={() => setQrScannerOpen(true)}
-            variant="outline"
-            className="w-full"
-            size="lg"
-          >
-            <QrCode className="mr-2 h-4 w-4" />
-            Join with QR Code
-          </Button>
+          <div className="text-center">
+            <h1 className={`text-4xl font-semibold tracking-tight mb-2 ${
+              selectedMode === 'birthday' ? 'text-pink-600' :
+              selectedMode === 'party' ? 'text-purple-600' :
+              'text-foreground'
+            }`}>
+              {t('title')}
+            </h1>
+            <p className="text-muted-foreground">
+              {t('subtitle')}
+            </p>
+          </div>
+
+          {/* Buttons Container */}
+          <div className="w-full bg-white/80 backdrop-blur-sm rounded-lg border shadow-sm p-6 space-y-4">
+            <div className="space-y-2">
+              <Input
+                type="text"
+                placeholder={t('eventCodePlaceholder')}
+                value={eventCode}
+                onChange={(e) => {
+                  setEventCode(e.target.value.toUpperCase())
+                  setError(null)
+                }}
+                onKeyPress={handleKeyPress}
+                maxLength={6}
+                className="text-center text-lg tracking-widest uppercase bg-white"
+                disabled={isLoading}
+              />
+              {error && (
+                <p className="text-sm text-destructive text-center">{error}</p>
+              )}
+            </div>
+
+            <Button
+              onClick={handleJoin}
+              disabled={isLoading}
+              className="w-full"
+              size="lg"
+            >
+              {isLoading ? tCommon('joining') : t('joinButton')}
+            </Button>
+
+            <Button
+              onClick={() => setQrScannerOpen(true)}
+              variant="outline"
+              className="w-full"
+              size="lg"
+            >
+              <QrCode className="mr-2 h-4 w-4" />
+              {t('joinWithQR')}
+            </Button>
+          </div>
+
+          <QRScanner
+            open={qrScannerOpen}
+            onClose={() => setQrScannerOpen(false)}
+            onScan={handleQRScan}
+          />
         </div>
+      </main>
 
-        <div className="mt-8 text-center">
+      {/* Footer */}
+      <footer className="w-full border-t bg-white/80 backdrop-blur-sm py-4 px-6 relative z-10">
+        <div className="max-w-md mx-auto text-center">
           <p className="text-sm text-muted-foreground">
-            Are you a host?{' '}
+            {t('hostPrompt')}{' '}
             <a
-              href="/host/dashboard"
+              href={`/${locale}/host/dashboard`}
               className="text-primary hover:underline font-medium"
             >
-              Go to Dashboard
+              {t('goToDashboard')}
             </a>
           </p>
         </div>
-
-        <QRScanner
-          open={qrScannerOpen}
-          onClose={() => setQrScannerOpen(false)}
-          onScan={handleQRScan}
-        />
-      </main>
+      </footer>
     </div>
   )
 }

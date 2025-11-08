@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase'
+import { useTranslations } from 'next-intl'
 
 interface HostAnnouncement {
   message: string
@@ -26,6 +27,8 @@ export function HostAnnouncement({ eventCode }: HostAnnouncementProps) {
   const [currentAnnouncement, setCurrentAnnouncement] = useState<HostAnnouncement | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const supabase = createClient()
+  const t = useTranslations('announcement')
+  const tCommon = useTranslations('common')
 
   useEffect(() => {
     const channel = supabase.channel(`event:${eventCode}`)
@@ -54,9 +57,9 @@ export function HostAnnouncement({ eventCode }: HostAnnouncementProps) {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle className="text-primary">Host Announcement</DialogTitle>
+            <DialogTitle className="text-primary">{t('title')}</DialogTitle>
             <DialogDescription>
-              The host has sent an important message
+              {t('description')}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
@@ -64,7 +67,7 @@ export function HostAnnouncement({ eventCode }: HostAnnouncementProps) {
           </div>
           <div className="flex justify-end mt-4">
             <Button onClick={() => setIsDialogOpen(false)}>
-              OK
+              {tCommon('ok')}
             </Button>
           </div>
         </DialogContent>
@@ -78,7 +81,7 @@ export function HostAnnouncement({ eventCode }: HostAnnouncementProps) {
               <CardContent className="p-4">
                 <div className="flex items-start gap-2">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-primary mb-1">Host Announcement</p>
+                    <p className="text-sm font-medium text-primary mb-1">{t('cardTitle')}</p>
                     <p className="text-sm">{announcement.message}</p>
                   </div>
                 </div>
