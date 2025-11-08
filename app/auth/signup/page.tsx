@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -13,15 +13,22 @@ export default function SignupPage() {
   const [username, setUsername] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
   const router = useRouter()
-  const supabase = createClient()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!mounted) return
+
     setIsLoading(true)
     setError(null)
 
     try {
+      const supabase = createClient()
       const { error: authError } = await supabase.auth.signUp({
         email,
         password,

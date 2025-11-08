@@ -21,7 +21,7 @@ export function HostAnnouncement({ eventCode }: HostAnnouncementProps) {
     const channel = supabase.channel(`event:${eventCode}`)
 
     channel
-      .on('broadcast', { event: 'announcement' }, (payload) => {
+      .on('broadcast', { event: 'announcement' }, (payload: { payload: { message: string } }) => {
         setAnnouncements((prev) => [
           {
             message: payload.payload.message,

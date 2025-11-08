@@ -156,7 +156,7 @@ export default function EventPage() {
           table: 'notes',
           filter: `event_id=eq.${event.id}`,
         },
-        async (payload) => {
+        async (payload: { new: { id: string } }) => {
           // Fetch the new note with participant and profile data
           const { data: newNote } = await supabase
             .from('notes')

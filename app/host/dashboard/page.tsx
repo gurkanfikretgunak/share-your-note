@@ -103,7 +103,7 @@ export default function HostDashboard() {
           table: 'notes',
           filter: `event_id=eq.${currentEvent.id}`,
         },
-        async (payload) => {
+        async (payload: { new: { id: string } }) => {
           const { data: newNote } = await supabase
             .from('notes')
             .select(`
