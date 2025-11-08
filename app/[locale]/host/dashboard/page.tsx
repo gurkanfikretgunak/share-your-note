@@ -51,6 +51,11 @@ export default function HostDashboard() {
     totalLikes: 0,
     imageMessages: 0,
   })
+  const [endEventDialogOpen, setEndEventDialogOpen] = useState(false)
+  const [deleteNoteDialogOpen, setDeleteNoteDialogOpen] = useState(false)
+  const [noteToDelete, setNoteToDelete] = useState<string | null>(null)
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string>('')
 
   useEffect(() => {
     checkAuth()
@@ -393,7 +398,8 @@ export default function HostDashboard() {
       setIsDialogOpen(false)
     } catch (err) {
       const error = err as Error
-      alert(tCreate('error') + ': ' + error.message)
+      setErrorMessage(tCreate('error') + ': ' + error.message)
+      setErrorDialogOpen(true)
     } finally {
       setIsCreatingEvent(false)
     }
@@ -408,7 +414,8 @@ export default function HostDashboard() {
       .eq('id', currentEvent.id)
 
     if (error) {
-      alert(t('errors.startFailed') + ': ' + error.message)
+      setErrorMessage(t('errors.startFailed') + ': ' + error.message)
+      setErrorDialogOpen(true)
       return
     }
 
@@ -424,19 +431,23 @@ export default function HostDashboard() {
       .eq('id', currentEvent.id)
 
     if (error) {
-      alert(t('errors.pauseFailed') + ': ' + error.message)
+      setErrorMessage(t('errors.pauseFailed') + ': ' + error.message)
+      setErrorDialogOpen(true)
       return
     }
 
     setCurrentEvent({ ...currentEvent, status: 'pending' })
   }
 
-  const handleEndEvent = async () => {
+  const handleEndEvent = () => {
+    if (!currentEvent) return
+    setEndEventDialogOpen(true)
+  }
+
+  const confirmEndEvent = async () => {
     if (!currentEvent) return
 
-    if (!confirm(tEvent('endConfirm'))) {
-      return
-    }
+    setEndEventDialogOpen(false)
 
     const { error } = await supabase
       .from('events')
@@ -444,7 +455,8 @@ export default function HostDashboard() {
       .eq('id', currentEvent.id)
 
     if (error) {
-      alert(t('errors.endFailed') + ': ' + error.message)
+      setErrorMessage(t('errors.endFailed') + ': ' + error.message)
+      setErrorDialogOpen(true)
       return
     }
 
@@ -464,26 +476,34 @@ export default function HostDashboard() {
     setAnnouncementText('')
   }
 
-  const handleDeleteNote = async (noteId: string) => {
-    if (!confirm(tFeed('deleteConfirm'))) {
-      return
-    }
+  const handleDeleteNote = (noteId: string) => {
+    setNoteToDelete(noteId)
+    setDeleteNoteDialogOpen(true)
+  }
 
-    setDeletingNoteId(noteId)
+  const confirmDeleteNote = async () => {
+    if (!noteToDelete) return
+
+    setDeleteNoteDialogOpen(false)
+    setDeletingNoteId(noteToDelete)
+    
     try {
       const { error } = await supabase
         .from('notes')
         .delete()
-        .eq('id', noteId)
+        .eq('id', noteToDelete)
 
       if (error) {
-        alert(tFeed('deleteError') + ': ' + error.message)
+        setErrorMessage(tFeed('deleteError') + ': ' + error.message)
+        setErrorDialogOpen(true)
+        setDeletingNoteId(null)
+        setNoteToDelete(null)
         return
       }
 
       // Remove note from local state and update stats
       setNotes((prev) => {
-        const updated = prev.filter((note) => note.id !== noteId)
+        const updated = prev.filter((note) => note.id !== noteToDelete)
         
         // Update stats
         const totalMessages = updated.length
@@ -495,9 +515,11 @@ export default function HostDashboard() {
       })
     } catch (err) {
       const error = err as Error
-      alert(tFeed('deleteError') + ': ' + error.message)
+      setErrorMessage(tFeed('deleteError') + ': ' + error.message)
+      setErrorDialogOpen(true)
     } finally {
       setDeletingNoteId(null)
+      setNoteToDelete(null)
     }
   }
 
@@ -521,7 +543,8 @@ export default function HostDashboard() {
       .eq('id', currentEvent.id)
 
     if (error) {
-      alert(tEvent('titleUpdateError') + ': ' + error.message)
+      setErrorMessage(tEvent('titleUpdateError') + ': ' + error.message)
+      setErrorDialogOpen(true)
       return
     }
 
@@ -538,7 +561,8 @@ export default function HostDashboard() {
         .eq('id', noteId)
 
       if (error) {
-        alert(tFeed('favoriteError') + ': ' + error.message)
+        setErrorMessage(tFeed('favoriteError') + ': ' + error.message)
+        setErrorDialogOpen(true)
         return
       }
 
@@ -550,7 +574,8 @@ export default function HostDashboard() {
       )
     } catch (err) {
       const error = err as Error
-      alert(tFeed('favoriteError') + ': ' + error.message)
+      setErrorMessage(tFeed('favoriteError') + ': ' + error.message)
+      setErrorDialogOpen(true)
     }
   }
 
@@ -911,6 +936,83 @@ export default function HostDashboard() {
           </div>
         )}
       </div>
+
+      {/* End Event Confirmation Dialog */}
+      <Dialog open={endEventDialogOpen} onOpenChange={setEndEventDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{tEvent('end')}</DialogTitle>
+            <DialogDescription>
+              {tEvent('endConfirm')}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button 
+              variant="outline" 
+              onClick={() => setEndEventDialogOpen(false)}
+            >
+              {tCommon('cancel')}
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={confirmEndEvent}
+            >
+              {tEvent('end')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Note Confirmation Dialog */}
+      <Dialog open={deleteNoteDialogOpen} onOpenChange={setDeleteNoteDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{tFeed('deleteTitle')}</DialogTitle>
+            <DialogDescription>
+              {tFeed('deleteConfirm')}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setDeleteNoteDialogOpen(false)
+                setNoteToDelete(null)
+              }}
+            >
+              {tCommon('cancel')}
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={confirmDeleteNote}
+            >
+              {tCommon('delete')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Error Dialog */}
+      <Dialog open={errorDialogOpen} onOpenChange={setErrorDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">{tCommon('error')}</DialogTitle>
+            <DialogDescription>
+              {errorMessage}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              onClick={() => {
+                setErrorDialogOpen(false)
+                setErrorMessage('')
+              }}
+            >
+              {tCommon('ok')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
