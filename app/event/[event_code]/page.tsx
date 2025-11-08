@@ -317,6 +317,19 @@ export default function EventPage() {
           }
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'notes',
+          filter: `event_id=eq.${event.id}`,
+        },
+        (payload: { old: { id: string } }) => {
+          // Remove deleted note from local state
+          setNotes((prev) => prev.filter((note) => note.id !== payload.old.id))
+        }
+      )
       .subscribe((status: string) => {
         if (status === 'SUBSCRIBED') {
           console.log('Subscribed to notes channel')

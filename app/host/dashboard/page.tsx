@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { createClient } from '@/lib/supabase'
 import { EventMode, NoteWithParticipant, Event } from '@/types/database.types'
 import { QRCodeSVG } from 'qrcode.react'
-import { LogOut, Send } from 'lucide-react'
+import { LogOut, Send, Trash2, Edit2, X, Check } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import Image from 'next/image'
 
@@ -35,6 +35,9 @@ export default function HostDashboard() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [newEventTitle, setNewEventTitle] = useState('')
   const [newEventMode, setNewEventMode] = useState<EventMode>('general')
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [editingTitle, setEditingTitle] = useState('')
+  const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null)
 
   useEffect(() => {
     checkAuth()
@@ -119,6 +122,19 @@ export default function HostDashboard() {
           if (newNote) {
             setNotes((prev) => [newNote as NoteWithParticipant, ...prev])
           }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'notes',
+          filter: `event_id=eq.${currentEvent.id}`,
+        },
+        (payload: { old: { id: string } }) => {
+          // Remove deleted note from local state
+          setNotes((prev) => prev.filter((note) => note.id !== payload.old.id))
         }
       )
       .subscribe()
@@ -278,6 +294,62 @@ export default function HostDashboard() {
     setAnnouncementText('')
   }
 
+  const handleDeleteNote = async (noteId: string) => {
+    if (!confirm('Bu mesajı silmek istediğinizden emin misiniz?')) {
+      return
+    }
+
+    setDeletingNoteId(noteId)
+    try {
+      const { error } = await supabase
+        .from('notes')
+        .delete()
+        .eq('id', noteId)
+
+      if (error) {
+        alert('Mesaj silinirken hata oluştu: ' + error.message)
+        return
+      }
+
+      // Remove note from local state
+      setNotes((prev) => prev.filter((note) => note.id !== noteId))
+    } catch (err) {
+      const error = err as Error
+      alert('Mesaj silinirken hata oluştu: ' + error.message)
+    } finally {
+      setDeletingNoteId(null)
+    }
+  }
+
+  const handleStartEditTitle = () => {
+    if (!currentEvent) return
+    setEditingTitle(currentEvent.title)
+    setIsEditingTitle(true)
+  }
+
+  const handleCancelEditTitle = () => {
+    setIsEditingTitle(false)
+    setEditingTitle('')
+  }
+
+  const handleSaveTitle = async () => {
+    if (!currentEvent || !editingTitle.trim()) return
+
+    const { error } = await supabase
+      .from('events')
+      .update({ title: editingTitle.trim() })
+      .eq('id', currentEvent.id)
+
+    if (error) {
+      alert('Başlık güncellenirken hata oluştu: ' + error.message)
+      return
+    }
+
+    setCurrentEvent({ ...currentEvent, title: editingTitle.trim() })
+    setIsEditingTitle(false)
+    setEditingTitle('')
+  }
+
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/')
@@ -381,7 +453,50 @@ export default function HostDashboard() {
             <div className="lg:col-span-1 space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>{currentEvent.title}</CardTitle>
+                  {isEditingTitle ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={editingTitle}
+                        onChange={(e) => setEditingTitle(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            handleSaveTitle()
+                          } else if (e.key === 'Escape') {
+                            handleCancelEditTitle()
+                          }
+                        }}
+                        className="flex-1"
+                        autoFocus
+                      />
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={handleSaveTitle}
+                        disabled={!editingTitle.trim()}
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={handleCancelEditTitle}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between gap-2">
+                      <CardTitle className="flex-1">{currentEvent.title}</CardTitle>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={handleStartEditTitle}
+                        className="h-8 w-8"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
@@ -473,13 +588,25 @@ export default function HostDashboard() {
                                 </AvatarFallback>
                               </Avatar>
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="font-medium text-sm">
-                                    {note.participant.profile.username}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}
-                                  </span>
+                                <div className="flex items-center justify-between gap-2 mb-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-sm">
+                                      {note.participant.profile.username}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}
+                                    </span>
+                                  </div>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={() => handleDeleteNote(note.id)}
+                                    disabled={deletingNoteId === note.id}
+                                    title="Mesajı Sil"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
                                 </div>
                                 <div className="mt-2">
                                   {note.content_type === 'text' && (
