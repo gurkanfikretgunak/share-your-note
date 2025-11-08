@@ -318,7 +318,7 @@ export default function EventPage() {
                 } as NoteWithParticipant
                 // Add to the beginning and sort: favorited first, then by created_at
                 const updated = [noteWithLikes, ...prev]
-                return updated.sort((a, b) => {
+                return updated.sort((a: NoteWithParticipant, b: NoteWithParticipant) => {
                   if (a.is_favorited && !b.is_favorited) return -1
                   if (!a.is_favorited && b.is_favorited) return 1
                   return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -345,7 +345,7 @@ export default function EventPage() {
               note.id === payload.new.id ? { ...note, is_favorited: payload.new.is_favorited || false } : note
             )
             // Sort: favorited first, then by created_at
-            return updated.sort((a, b) => {
+            return updated.sort((a: NoteWithParticipant, b: NoteWithParticipant) => {
               if (a.is_favorited && !b.is_favorited) return -1
               if (!a.is_favorited && b.is_favorited) return 1
               return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -559,7 +559,7 @@ export default function EventPage() {
       })
 
       // Sort: favorited first, then by created_at
-      const sortedNotes = notesWithLikes.sort((a, b) => {
+      const sortedNotes = notesWithLikes.sort((a: NoteWithParticipant, b: NoteWithParticipant) => {
         if (a.is_favorited && !b.is_favorited) return -1
         if (!a.is_favorited && b.is_favorited) return 1
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
