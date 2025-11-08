@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { EventFeed } from '@/components/event-feed'
 import { HostAnnouncement } from '@/components/host-announcement'
 import { ImageUpload } from '@/components/image-upload'
@@ -12,6 +13,7 @@ import { createClient } from '@/lib/supabase'
 import { getOrCreateAnonymousUser, getStoredAnonymousUser } from '@/lib/anonymous-auth'
 import { NoteWithParticipant, Event, Participant } from '@/types/database.types'
 import { Smile, Heart, ThumbsUp, PartyPopper } from 'lucide-react'
+import { toast } from 'sonner'
 
 const EMOTIONS = [
   { emoji: '😊', label: 'Happy', icon: Smile },
@@ -49,8 +51,21 @@ export default function EventPage() {
 
   useEffect(() => {
     if (event && participant) {
-      const cleanup = subscribeToNotes()
-      return cleanup
+      try {
+        const cleanup = subscribeToNotes()
+        const cleanupParticipants = subscribeToParticipants()
+        return () => {
+          try {
+            cleanup()
+            cleanupParticipants()
+          } catch (err) {
+            console.error('Error cleaning up subscriptions:', err)
+          }
+        }
+      } catch (err) {
+        console.error('Error setting up subscriptions:', err)
+        setIsLoading(false)
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event, participant])
@@ -60,6 +75,7 @@ export default function EventPage() {
     
     try {
       setIsLoading(true)
+      setError(null)
       const supabase = createClient()
       // Check if event exists
       const { data: eventData, error: eventError } = await supabase
@@ -84,9 +100,20 @@ export default function EventPage() {
 
       // Check for stored anonymous user
       const storedUser = getStoredAnonymousUser()
+      console.log('loadEvent: Stored user:', storedUser ? 'found' : 'not found')
       if (storedUser) {
-        await joinEvent(storedUser.id, supabase)
+        try {
+          console.log('loadEvent: Attempting to join event with stored user...')
+          await joinEvent(storedUser.id, supabase)
+          console.log('loadEvent: Successfully joined event')
+        } catch (err) {
+          console.error('loadEvent: Error joining event:', err)
+          // If join fails, show username prompt
+          setShowUsernamePrompt(true)
+          setIsLoading(false)
+        }
       } else {
+        console.log('loadEvent: No stored user, showing username prompt')
         setShowUsernamePrompt(true)
         setIsLoading(false)
       }
@@ -121,25 +148,34 @@ export default function EventPage() {
 
   const joinEvent = async (profileId: string, supabaseClient = createClient()) => {
     if (!event) {
+      console.error('joinEvent: event is null')
       setIsLoading(false)
       return
     }
     
     try {
+      console.log('joinEvent: Checking for existing participant...')
       // Check if already a participant
-      const { data: existingParticipant } = await supabaseClient
+      const { data: existingParticipant, error: checkError } = await supabaseClient
         .from('participants')
         .select('*')
         .eq('event_id', event.id)
         .eq('profile_id', profileId)
-        .single()
+        .maybeSingle()
+
+      if (checkError) {
+        console.error('joinEvent: Error checking participant:', checkError)
+        throw checkError
+      }
 
       if (existingParticipant) {
+        console.log('joinEvent: Existing participant found')
         setParticipant(existingParticipant)
         setIsLoading(false)
         return
       }
 
+      console.log('joinEvent: Creating new participant...')
       // Join as participant
       const { data: newParticipant, error: joinError } = await supabaseClient
         .from('participants')
@@ -152,13 +188,16 @@ export default function EventPage() {
         .single()
 
       if (joinError) {
+        console.error('joinEvent: Error joining event:', joinError)
         throw joinError
       }
 
+      console.log('joinEvent: Successfully joined event')
       setParticipant(newParticipant)
       setIsLoading(false)
     } catch (err) {
       const error = err as Error
+      console.error('joinEvent: Exception:', error)
       setError(error.message || 'Failed to join event')
       setIsLoading(false)
       throw err // Re-throw to handle in handleUsernameSubmit
@@ -217,6 +256,60 @@ export default function EventPage() {
 
     // Load existing notes
     loadNotes(supabase)
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }
+
+  const subscribeToParticipants = () => {
+    if (!event || !participant) return () => {}
+
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`participants:${event.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'participants',
+          filter: `event_id=eq.${event.id}`,
+        },
+        async (payload: { new: { id: string; profile_id: string } }) => {
+          // Don't show toast for current user joining
+          if (payload.new.profile_id === participant.profile_id) {
+            return
+          }
+
+          try {
+            // Fetch the new participant with profile data
+            const { data: newParticipant } = await supabase
+              .from('participants')
+              .select(`
+                *,
+                profile:profiles!inner(*)
+              `)
+              .eq('id', payload.new.id)
+              .single()
+
+            if (newParticipant && newParticipant.profile) {
+              toast.success(`${newParticipant.profile.username} joined the event!`, {
+                duration: 3000,
+              })
+            }
+          } catch (err) {
+            console.error('Error fetching new participant:', err)
+          }
+        }
+      )
+      .subscribe((status: string) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Subscribed to participants channel')
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Participants channel error')
+        }
+      })
 
     return () => {
       supabase.removeChannel(channel)
@@ -418,7 +511,12 @@ export default function EventPage() {
         <div className="flex-1 overflow-y-auto p-4 pb-32">
           <div className="max-w-2xl mx-auto">
             <div className="mb-6">
-              <h1 className="text-2xl font-semibold mb-1">{event.title}</h1>
+              <div className="flex items-center justify-between mb-2">
+                <h1 className="text-2xl font-semibold">{event.title}</h1>
+                <Badge variant="secondary" className="text-sm">
+                  {notes.length} {notes.length === 1 ? 'message' : 'messages'}
+                </Badge>
+              </div>
               <p className="text-sm text-muted-foreground">Event Code: {event.event_code}</p>
             </div>
 
