@@ -21,6 +21,12 @@ A real-time, Kahoot-like web application where attendees can join events managed
 - **Event Modes:** Three themed modes - General, Birthday, and Party
 - **Image Upload:** Attendees can share images via Supabase Storage
 - **QR Code Support:** Join events via QR code scanning
+- **Event Status Management:** Hosts can set events to pending, active, or finished status
+- **Message Management:** Hosts can delete messages and favorite important ones
+- **Like System:** Attendees can like messages from other participants
+- **Consent Management:** GDPR, policy, cookie, and event data sharing consents for participants
+- **Event Title Editing:** Hosts can edit event titles anytime
+- **Event Restart:** Hosts can restart finished events
 
 ### Visual Effects & Animations
 
@@ -49,12 +55,20 @@ A real-time, Kahoot-like web application where attendees can join events managed
 - Clean, minimalist white background
 - No visual effects for professional use
 
-### Interactive Features
+### Host Features
 
-- **Mode Toggle Buttons:** Switch between General, Birthday, and Party modes on the home page
-- **Dynamic Backgrounds:** Background changes based on selected mode
-- **Smooth Transitions:** All mode changes include smooth animations
-- **Responsive Design:** All effects work seamlessly on mobile and desktop
+- **Event Creation:** Create events with custom titles and modes
+- **Event Status Control:** Start, pause, end, and restart events
+- **Message Management:**
+  - Delete inappropriate messages
+  - Favorite important messages (highlighted with yellow border)
+  - View like counts on all messages
+- **Event Customization:**
+  - Edit event titles anytime
+  - Set event modes (General, Birthday, Party)
+- **QR Code Generation:** Automatic QR code generation for easy sharing
+- **Real-time Announcements:** Broadcast messages to all attendees
+- **Participant Monitoring:** View all attendees and their submissions in real-time
 
 ## Setup Instructions
 
@@ -74,10 +88,14 @@ npm install
    - `004_notes.sql`
    - `005_realtime_policies.sql`
    - `006_storage_bucket.sql`
+   - `011_consents.sql`
+   - `012_host_delete_notes.sql`
+   - `013_add_favorited_notes.sql`
+   - `014_note_likes.sql`
 
-3. Enable Realtime for the `notes` and `participants` tables in Supabase Dashboard:
+3. Enable Realtime for the following tables in Supabase Dashboard:
    - Go to Database > Replication
-   - Enable replication for `notes` and `participants` tables
+   - Enable replication for `notes`, `participants`, and `note_likes` tables
 
 4. Create a storage bucket named `event-images`:
    - Go to Storage in Supabase Dashboard
@@ -115,17 +133,33 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 5. Select an event mode (General, Birthday, or Party)
 6. Share the event code or QR code with attendees
 7. Click "Start Event" when ready
-8. Send announcements using the announcement input
-9. View real-time feed of attendee submissions
+8. **Manage Messages:**
+   - Favorite important messages (star icon)
+   - Delete inappropriate messages (trash icon)
+   - View like counts on messages
+9. **Edit Event:**
+   - Click the edit icon next to the event title to change it
+10. **Control Event Status:**
+    - Pause event (sets to pending)
+    - End event (sets to finished)
+    - Restart finished events
+11. Send announcements using the announcement input
+12. View real-time feed of attendee submissions
 
 ### For Attendees
 
 1. Go to the home page
 2. **Select a mode** using the toggle buttons (General, Birthday, or Party) to customize your experience
 3. Enter the event code or scan the QR code
-4. Enter your name when prompted
-5. Start sharing notes, images, or emotions!
-6. Enjoy the visual effects based on the event mode
+4. **Accept Consents:** Accept GDPR, policy, cookie, and event data sharing consents
+5. Enter your name when prompted
+6. Start sharing notes, images, or emotions!
+7. **Interact with Messages:**
+   - Like messages from other participants (heart icon)
+   - See like counts on all messages
+   - View favorited messages highlighted at the top
+8. Enjoy the visual effects based on the event mode
+9. Note: You cannot join events that are pending or finished
 
 ## Project Structure
 
@@ -158,14 +192,17 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ## Database Schema
 
 - **profiles:** User profiles (linked to auth.users or anonymous)
-- **events:** Event information with codes and modes
+- **events:** Event information with codes, modes, and status (pending, active, finished)
 - **participants:** Event participation mapping
-- **notes:** Shared content (text, images, emotions)
+- **notes:** Shared content (text, images, emotions) with favorite status
+- **consents:** User consent records (GDPR, policy, cookie, event data sharing)
+- **note_likes:** Like records for messages (participant_id, note_id)
 
 ## Notes
 
 - Anonymous users are stored in the `profiles` table with generated UUIDs
 - Event codes are 6-character alphanumeric strings
+- Events have three statuses: `pending`, `active`, `finished`
 - Images are stored in Supabase Storage bucket `event-images`
 - Real-time updates use Supabase Realtime subscriptions
 - Host announcements use Supabase Broadcast channels
@@ -173,6 +210,14 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 - Mode selection on the home page is for preview only - actual event mode is set by the host
 - Birthday mode includes floating balloons, abstract geometric shapes, and confetti
 - Party mode features a full laser light show with rotating beams and pulsing grid
+- **Consent Management:** All participants must accept GDPR, policy, cookie, and event data sharing consents before joining
+- **Message Management:** Hosts can favorite messages (appears at top with yellow border) and delete inappropriate content
+- **Like System:** Participants can like messages, with real-time like count updates
+- **Event Control:** Hosts can pause, end, and restart events, controlling participant access
+- **Title Editing:** Hosts can edit event titles anytime from the dashboard
+- Participants cannot join events with `pending` or `finished` status
+- Favorited messages are sorted to the top of the feed
+- Like counts are displayed with a heart icon next to each message
 
 ## License
 
