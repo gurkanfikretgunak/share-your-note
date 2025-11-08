@@ -49,7 +49,8 @@ export default function EventPage() {
 
   useEffect(() => {
     if (event && participant) {
-      subscribeToNotes()
+      const cleanup = subscribeToNotes()
+      return cleanup
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event, participant])
@@ -165,7 +166,7 @@ export default function EventPage() {
   }
 
   const subscribeToNotes = () => {
-    if (!event) return
+    if (!event) return () => {}
 
     const supabase = createClient()
     const channel = supabase
@@ -179,25 +180,40 @@ export default function EventPage() {
           filter: `event_id=eq.${event.id}`,
         },
         async (payload: { new: { id: string } }) => {
-          // Fetch the new note with participant and profile data
-          const { data: newNote } = await supabase
-            .from('notes')
-            .select(`
-              *,
-              participant:participants!inner(
+          try {
+            // Fetch the new note with participant and profile data
+            const { data: newNote, error: fetchError } = await supabase
+              .from('notes')
+              .select(`
                 *,
-                profile:profiles!inner(*)
-              )
-            `)
-            .eq('id', payload.new.id)
-            .single()
+                participant:participants!inner(
+                  *,
+                  profile:profiles!inner(*)
+                )
+              `)
+              .eq('id', payload.new.id)
+              .single()
 
-          if (newNote) {
-            setNotes((prev) => [newNote as NoteWithParticipant, ...prev])
+            if (fetchError) {
+              console.error('Error fetching new note:', fetchError)
+              return
+            }
+
+            if (newNote) {
+              setNotes((prev) => [newNote as NoteWithParticipant, ...prev])
+            }
+          } catch (err) {
+            console.error('Error processing new note:', err)
           }
         }
       )
-      .subscribe()
+      .subscribe((status: string) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Subscribed to notes channel')
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Channel error')
+        }
+      })
 
     // Load existing notes
     loadNotes(supabase)
@@ -210,21 +226,33 @@ export default function EventPage() {
   const loadNotes = async (supabaseClient = createClient()) => {
     if (!event) return
 
-    const { data: notesData } = await supabaseClient
-      .from('notes')
-      .select(`
-        *,
-        participant:participants!inner(
+    try {
+      const { data: notesData, error: notesError } = await supabaseClient
+        .from('notes')
+        .select(`
           *,
-          profile:profiles!inner(*)
-        )
-      `)
-      .eq('event_id', event.id)
-      .order('created_at', { ascending: false })
-      .limit(50)
+          participant:participants!inner(
+            *,
+            profile:profiles!inner(*)
+          )
+        `)
+        .eq('event_id', event.id)
+        .order('created_at', { ascending: false })
+        .limit(50)
 
-    if (notesData) {
-      setNotes(notesData as NoteWithParticipant[])
+      if (notesError) {
+        console.error('Error loading notes:', notesError)
+        setError('Failed to load notes: ' + notesError.message)
+        return
+      }
+
+      if (notesData) {
+        setNotes(notesData as NoteWithParticipant[])
+      }
+    } catch (err) {
+      const error = err as Error
+      console.error('Error loading notes:', error)
+      setError('Failed to load notes: ' + error.message)
     }
   }
 
@@ -232,6 +260,7 @@ export default function EventPage() {
     if (!textInput.trim() || !participant || !event) return
 
     setIsSubmitting(true)
+    setError(null)
     try {
       const supabase = createClient()
       const { error: noteError } = await supabase.from('notes').insert({
@@ -246,6 +275,10 @@ export default function EventPage() {
       }
 
       setTextInput('')
+      // Reload notes to ensure the new note appears
+      setTimeout(() => {
+        loadNotes(supabase)
+      }, 500)
     } catch (err) {
       const error = err as Error
       setError(error.message || 'Failed to submit note')
@@ -258,6 +291,7 @@ export default function EventPage() {
     if (!participant || !event) return
 
     setIsSubmitting(true)
+    setError(null)
     try {
       const supabase = createClient()
       const { error: noteError } = await supabase.from('notes').insert({
@@ -270,6 +304,11 @@ export default function EventPage() {
       if (noteError) {
         throw noteError
       }
+
+      // Reload notes to ensure the new note appears
+      setTimeout(() => {
+        loadNotes(supabase)
+      }, 500)
     } catch (err) {
       const error = err as Error
       setError(error.message || 'Failed to submit emotion')
@@ -282,6 +321,7 @@ export default function EventPage() {
     if (!participant || !event) return
 
     setIsSubmitting(true)
+    setError(null)
     try {
       const supabase = createClient()
       const { error: noteError } = await supabase.from('notes').insert({
@@ -294,6 +334,11 @@ export default function EventPage() {
       if (noteError) {
         throw noteError
       }
+
+      // Reload notes to ensure the new note appears
+      setTimeout(() => {
+        loadNotes(supabase)
+      }, 500)
     } catch (err) {
       const error = err as Error
       setError(error.message || 'Failed to submit image')
