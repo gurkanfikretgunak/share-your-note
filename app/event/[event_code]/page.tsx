@@ -539,17 +539,17 @@ export default function EventPage() {
       if (!notesData) return
 
       // Get like counts and check if current user liked each note
-      const noteIds = notesData.map(n => n.id)
+      const noteIds = notesData.map((n: { id: string }) => n.id)
       const { data: likesData } = await supabaseClient
         .from('note_likes')
         .select('note_id, participant_id')
         .in('note_id', noteIds)
 
       // Calculate like counts and check if current user liked
-      const notesWithLikes = notesData.map((note) => {
-        const noteLikes = likesData?.filter(like => like.note_id === note.id) || []
+      const notesWithLikes = notesData.map((note: any) => {
+        const noteLikes = likesData?.filter((like: { note_id: string }) => like.note_id === note.id) || []
         const likeCount = noteLikes.length
-        const isLikedByCurrentUser = noteLikes.some(like => like.participant_id === participant.id)
+        const isLikedByCurrentUser = noteLikes.some((like: { participant_id: string }) => like.participant_id === participant.id)
         
         return {
           ...note,

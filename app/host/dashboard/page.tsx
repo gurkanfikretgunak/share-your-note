@@ -264,15 +264,15 @@ export default function HostDashboard() {
     if (!notesData) return
 
     // Get like counts for all notes
-    const noteIds = notesData.map(n => n.id)
+    const noteIds = notesData.map((n: { id: string }) => n.id)
     const { data: likesData } = await supabase
       .from('note_likes')
       .select('note_id')
       .in('note_id', noteIds)
 
     // Calculate like counts
-    const notesWithLikes = notesData.map((note) => {
-      const likeCount = likesData?.filter(like => like.note_id === note.id).length || 0
+    const notesWithLikes = notesData.map((note: any) => {
+      const likeCount = likesData?.filter((like: { note_id: string }) => like.note_id === note.id).length || 0
       return {
         ...note,
         like_count: likeCount,
