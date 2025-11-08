@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { createClient } from '@/lib/supabase'
 import { EventMode, NoteWithParticipant, Event } from '@/types/database.types'
 import { QRCodeSVG } from 'qrcode.react'
-import { LogOut, Send, Trash2, Edit2, X, Check, Star, Heart } from 'lucide-react'
+import { LogOut, Send, Trash2, Edit2, X, Check, Star, Heart, MessageSquare, Image as ImageIcon } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import Image from 'next/image'
 
@@ -38,6 +38,11 @@ export default function HostDashboard() {
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [editingTitle, setEditingTitle] = useState('')
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null)
+  const [stats, setStats] = useState({
+    totalMessages: 0,
+    totalLikes: 0,
+    imageMessages: 0,
+  })
 
   useEffect(() => {
     checkAuth()
@@ -128,11 +133,19 @@ export default function HostDashboard() {
               } as NoteWithParticipant
               // Sort: favorited first, then by created_at
               const updated = [noteWithLikes, ...prev]
-              return updated.sort((a: NoteWithParticipant, b: NoteWithParticipant) => {
+              const sorted = updated.sort((a: NoteWithParticipant, b: NoteWithParticipant) => {
                 if (a.is_favorited && !b.is_favorited) return -1
                 if (!a.is_favorited && b.is_favorited) return 1
                 return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
               })
+              
+              // Update stats
+              const totalMessages = sorted.length
+              const totalLikes = sorted.reduce((sum, note) => sum + (note.like_count || 0), 0)
+              const imageMessages = sorted.filter((note) => note.content_type === 'image').length
+              setStats({ totalMessages, totalLikes, imageMessages })
+              
+              return sorted
             })
           }
         }
@@ -155,8 +168,8 @@ export default function HostDashboard() {
           if (!noteData || !currentEvent || noteData.event_id !== currentEvent.id) return
 
           // Update like count
-          setNotes((prev) =>
-            prev.map((note) => {
+          setNotes((prev) => {
+            const updated = prev.map((note) => {
               if (note.id === payload.new.note_id) {
                 return {
                   ...note,
@@ -165,7 +178,15 @@ export default function HostDashboard() {
               }
               return note
             })
-          )
+            
+            // Update stats
+            const totalMessages = updated.length
+            const totalLikes = updated.reduce((sum, note) => sum + (note.like_count || 0), 0)
+            const imageMessages = updated.filter((note) => note.content_type === 'image').length
+            setStats({ totalMessages, totalLikes, imageMessages })
+            
+            return updated
+          })
         }
       )
       .on(
@@ -186,8 +207,8 @@ export default function HostDashboard() {
           if (!noteData || !currentEvent || noteData.event_id !== currentEvent.id) return
 
           // Update like count
-          setNotes((prev) =>
-            prev.map((note) => {
+          setNotes((prev) => {
+            const updated = prev.map((note) => {
               if (note.id === payload.old.note_id) {
                 return {
                   ...note,
@@ -196,7 +217,15 @@ export default function HostDashboard() {
               }
               return note
             })
-          )
+            
+            // Update stats
+            const totalMessages = updated.length
+            const totalLikes = updated.reduce((sum, note) => sum + (note.like_count || 0), 0)
+            const imageMessages = updated.filter((note) => note.content_type === 'image').length
+            setStats({ totalMessages, totalLikes, imageMessages })
+            
+            return updated
+          })
         }
       )
       .on(
@@ -287,6 +316,17 @@ export default function HostDashboard() {
     })
 
     setNotes(sortedNotes)
+
+    // Calculate statistics
+    const totalMessages = sortedNotes.length
+    const totalLikes = sortedNotes.reduce((sum, note) => sum + (note.like_count || 0), 0)
+    const imageMessages = sortedNotes.filter((note) => note.content_type === 'image').length
+
+    setStats({
+      totalMessages,
+      totalLikes,
+      imageMessages,
+    })
   }
 
   const generateEventCode = async (): Promise<string> => {
@@ -433,8 +473,18 @@ export default function HostDashboard() {
         return
       }
 
-      // Remove note from local state
-      setNotes((prev) => prev.filter((note) => note.id !== noteId))
+      // Remove note from local state and update stats
+      setNotes((prev) => {
+        const updated = prev.filter((note) => note.id !== noteId)
+        
+        // Update stats
+        const totalMessages = updated.length
+        const totalLikes = updated.reduce((sum, note) => sum + (note.like_count || 0), 0)
+        const imageMessages = updated.filter((note) => note.content_type === 'image').length
+        setStats({ totalMessages, totalLikes, imageMessages })
+        
+        return updated
+      })
     } catch (err) {
       const error = err as Error
       alert('Mesaj silinirken hata oluştu: ' + error.message)
@@ -723,7 +773,52 @@ export default function HostDashboard() {
                       No notes yet. Share the event code with attendees!
                     </div>
                   ) : (
-                    <div className="space-y-4">
+                    <>
+                      {/* Statistics Cards */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <Card>
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-blue-100 rounded-lg">
+                                <MessageSquare className="h-5 w-5 text-blue-600" />
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Toplam Mesaj</p>
+                                <p className="text-2xl font-bold">{stats.totalMessages}</p>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-red-100 rounded-lg">
+                                <Heart className="h-5 w-5 text-red-600 fill-red-600" />
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Toplam Beğeni</p>
+                                <p className="text-2xl font-bold">{stats.totalLikes}</p>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-purple-100 rounded-lg">
+                                <ImageIcon className="h-5 w-5 text-purple-600" />
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Görsel Mesaj</p>
+                                <p className="text-2xl font-bold">{stats.imageMessages}</p>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      {/* Notes List */}
+                      <div className="space-y-4">
                       {notes.map((note) => (
                         <Card key={note.id} className={note.is_favorited ? 'border-yellow-400 border-2 bg-yellow-50/50' : ''}>
                           <CardContent className="p-4">
@@ -797,6 +892,7 @@ export default function HostDashboard() {
                         </Card>
                       ))}
                     </div>
+                    </>
                   )}
                 </CardContent>
               </Card>
