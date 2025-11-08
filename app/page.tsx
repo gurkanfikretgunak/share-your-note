@@ -71,6 +71,12 @@ export default function Home() {
         return
       }
 
+      if (event.status === 'pending') {
+        setError('Bu etkinlik henüz başlamadı. Lütfen host\'un etkinliği başlatmasını bekleyin.')
+        setIsLoading(false)
+        return
+      }
+
       // Redirect to event page
       router.push(`/event/${code}`)
     } catch {
@@ -79,9 +85,49 @@ export default function Home() {
     }
   }
 
-  const handleQRScan = (code: string) => {
-    setEventCode(code.toUpperCase())
+  const handleQRScan = async (code: string) => {
     setQrScannerOpen(false)
+    const eventCodeValue = code.trim().toUpperCase()
+    setEventCode(eventCodeValue)
+    
+    // Automatically join after scanning QR code
+    if (eventCodeValue) {
+      setIsLoading(true)
+      setError(null)
+
+      try {
+        // Check if event exists
+        const { data: event, error: eventError } = await supabase
+          .from('events')
+          .select('id, status, event_code')
+          .eq('event_code', eventCodeValue)
+          .single()
+
+        if (eventError || !event) {
+          setError('Invalid event code. Please check and try again.')
+          setIsLoading(false)
+          return
+        }
+
+        if (event.status === 'finished') {
+          setError('This event has ended.')
+          setIsLoading(false)
+          return
+        }
+
+        if (event.status === 'pending') {
+          setError('Bu etkinlik henüz başlamadı. Lütfen host\'un etkinliği başlatmasını bekleyin.')
+          setIsLoading(false)
+          return
+        }
+
+        // Redirect to event page
+        router.push(`/event/${eventCodeValue}`)
+      } catch {
+        setError('Something went wrong. Please try again.')
+        setIsLoading(false)
+      }
+    }
   }
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -256,16 +302,19 @@ export default function Home() {
               return (
                 <div
                   key={`laser-${i}`}
-                  className="absolute top-1/2 left-1/2 w-full"
+                  className="absolute"
                   style={{
-                    height: '2px',
-                    background: `linear-gradient(90deg, transparent, ${color}, transparent)`,
+                    top: '50%',
+                    left: '50%',
+                    width: '200vw',
+                    height: '4px',
+                    background: `linear-gradient(90deg, transparent 0%, ${color} 15%, ${color} 50%, ${color} 85%, transparent 100%)`,
                     transform: `rotate(${angle}deg) translateX(-50%)`,
-                    transformOrigin: 'center',
-                    boxShadow: `0 0 10px ${color}, 0 0 20px ${color}, 0 0 30px ${color}`,
+                    transformOrigin: 'center center',
+                    boxShadow: `0 0 20px ${color}, 0 0 40px ${color}, 0 0 60px ${color}`,
                     animation: `laser-pulse ${duration}s ease-in-out infinite`,
                     animationDelay: `${delay}s`,
-                    opacity: 0.7,
+                    opacity: 0.9,
                   }}
                 />
               )
@@ -273,44 +322,42 @@ export default function Home() {
 
             {/* Rotating Laser Beams */}
             {[...Array(4)].map((_, i) => {
-              const colors = ['#FF00FF', '#00FFFF', '#FFFF00', '#FF00FF']
+              const colors = ['#FF00FF', '#00FFFF', '#FFFF00', '#FF1493']
               const color = colors[i % 4]
               const delay = i * 0.75
 
               return (
                 <div
                   key={`rotating-laser-${i}`}
-                  className="absolute top-1/2 left-1/2 w-full h-full"
+                  className="absolute"
                   style={{
+                    top: '50%',
+                    left: '50%',
+                    width: '200vw',
+                    height: '5px',
+                    background: `linear-gradient(90deg, transparent 0%, ${color} 25%, ${color} 50%, ${color} 75%, transparent 100%)`,
+                    transform: 'translateX(-50%)',
+                    transformOrigin: 'center center',
+                    boxShadow: `0 0 25px ${color}, 0 0 50px ${color}, 0 0 75px ${color}`,
                     animation: `rotate-laser 4s linear infinite`,
                     animationDelay: `${delay}s`,
-                    transformOrigin: 'center',
+                    opacity: 1,
                   }}
-                >
-                  <div
-                    className="absolute top-0 left-1/2 w-1 h-full"
-                    style={{
-                      background: `linear-gradient(180deg, transparent, ${color}, transparent)`,
-                      transform: 'translateX(-50%)',
-                      boxShadow: `0 0 15px ${color}, 0 0 30px ${color}`,
-                      opacity: 0.8,
-                    }}
-                  />
-                </div>
+                />
               )
             })}
 
             {/* Laser Grid */}
-            <div className="absolute inset-0 opacity-30">
+            <div className="absolute inset-0 opacity-40">
               {[...Array(5)].map((_, i) => (
                 <div
                   key={`grid-h-${i}`}
                   className="absolute w-full"
                   style={{
                     top: `${(i + 1) * 20}%`,
-                    height: '1px',
-                    background: `linear-gradient(90deg, transparent, #9C27B0, transparent)`,
-                    boxShadow: '0 0 5px #9C27B0',
+                    height: '2px',
+                    background: `linear-gradient(90deg, transparent 0%, #9C27B0 20%, #9C27B0 80%, transparent 100%)`,
+                    boxShadow: '0 0 10px #9C27B0, 0 0 20px #9C27B0',
                     animation: `pulse-grid 2s ease-in-out infinite`,
                     animationDelay: `${i * 0.2}s`,
                   }}
@@ -322,9 +369,9 @@ export default function Home() {
                   className="absolute h-full"
                   style={{
                     left: `${(i + 1) * 20}%`,
-                    width: '1px',
-                    background: `linear-gradient(180deg, transparent, #673AB7, transparent)`,
-                    boxShadow: '0 0 5px #673AB7',
+                    width: '2px',
+                    background: `linear-gradient(180deg, transparent 0%, #673AB7 20%, #673AB7 80%, transparent 100%)`,
+                    boxShadow: '0 0 10px #673AB7, 0 0 20px #673AB7',
                     animation: `pulse-grid 2s ease-in-out infinite`,
                     animationDelay: `${i * 0.2 + 1}s`,
                   }}

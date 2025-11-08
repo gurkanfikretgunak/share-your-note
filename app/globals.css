@@ -151,22 +151,22 @@
 }
 
 @keyframes rotate-laser {
-  0% {
-    transform: rotate(0deg);
+  from {
+    transform: rotate(0deg) translateX(-50%);
   }
-  100% {
-    transform: rotate(360deg);
+  to {
+    transform: rotate(360deg) translateX(-50%);
   }
 }
 
 @keyframes laser-pulse {
   0%, 100% {
-    opacity: 0.3;
-    transform: scale(0.8);
+    opacity: 0.4;
+    filter: brightness(0.8);
   }
   50% {
     opacity: 1;
-    transform: scale(1);
+    filter: brightness(1.5);
   }
 }
 

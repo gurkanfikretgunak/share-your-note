@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { createClient } from '@/lib/supabase'
@@ -229,6 +229,42 @@ export default function HostDashboard() {
     setCurrentEvent({ ...currentEvent, status: 'active' })
   }
 
+  const handlePauseEvent = async () => {
+    if (!currentEvent) return
+
+    const { error } = await supabase
+      .from('events')
+      .update({ status: 'pending' })
+      .eq('id', currentEvent.id)
+
+    if (error) {
+      alert('Failed to pause event: ' + error.message)
+      return
+    }
+
+    setCurrentEvent({ ...currentEvent, status: 'pending' })
+  }
+
+  const handleEndEvent = async () => {
+    if (!currentEvent) return
+
+    if (!confirm('Are you sure you want to end this event? This action cannot be undone.')) {
+      return
+    }
+
+    const { error } = await supabase
+      .from('events')
+      .update({ status: 'finished' })
+      .eq('id', currentEvent.id)
+
+    if (error) {
+      alert('Failed to end event: ' + error.message)
+      return
+    }
+
+    setCurrentEvent({ ...currentEvent, status: 'finished' })
+  }
+
   const handleSendAnnouncement = async () => {
     if (!announcementText.trim() || !currentEvent) return
 
@@ -269,42 +305,74 @@ export default function HostDashboard() {
 
       <div className="container mx-auto px-4 py-8">
         {!currentEvent ? (
-          <div className="max-w-md mx-auto text-center space-y-4">
-            <p className="text-muted-foreground">No event created yet</p>
+          <div className="max-w-md mx-auto text-center space-y-6 py-12">
+            <div className="space-y-2">
+              <h2 className="text-2xl font-semibold text-gray-900">Henüz Etkinlik Yok</h2>
+              <p className="text-muted-foreground">Başlamak için yeni bir etkinlik oluşturun</p>
+            </div>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button>Create New Event</Button>
+                <Button size="lg" className="shadow-sm">
+                  Yeni Etkinlik Oluştur
+                </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                  <DialogTitle>Create New Event</DialogTitle>
+                  <DialogTitle className="text-2xl">Yeni Etkinlik Oluştur</DialogTitle>
+                  <DialogDescription>
+                    Katılımcıların katılabileceği yeni bir etkinlik oluşturun. Etkinlik kodu otomatik olarak oluşturulacaktır.
+                  </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4">
+                <div className="space-y-6 py-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Event Title</label>
+                    <label htmlFor="event-title" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      Etkinlik Başlığı
+                    </label>
                     <Input
-                      placeholder="My Awesome Event"
+                      id="event-title"
+                      placeholder="Örn: Yılbaşı Partisi"
                       value={newEventTitle}
                       onChange={(e) => setNewEventTitle(e.target.value)}
+                      className="h-10"
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter' && newEventTitle.trim() && !isCreatingEvent) {
+                          handleCreateEvent()
+                        }
+                      }}
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Event Mode</label>
+                    <label htmlFor="event-mode" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      Etkinlik Modu
+                    </label>
                     <Select value={newEventMode} onValueChange={(value) => setNewEventMode(value as EventMode)}>
-                      <SelectTrigger>
+                      <SelectTrigger id="event-mode" className="h-10">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="general">General</SelectItem>
-                        <SelectItem value="birthday">Birthday</SelectItem>
-                        <SelectItem value="party">Party</SelectItem>
+                        <SelectItem value="general">Genel</SelectItem>
+                        <SelectItem value="birthday">Doğum Günü</SelectItem>
+                        <SelectItem value="party">Parti</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button onClick={handleCreateEvent} disabled={!newEventTitle.trim() || isCreatingEvent} className="w-full">
-                    {isCreatingEvent ? 'Creating...' : 'Create Event'}
-                  </Button>
                 </div>
+                <DialogFooter className="gap-2 sm:gap-0">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsDialogOpen(false)}
+                    disabled={isCreatingEvent}
+                  >
+                    İptal
+                  </Button>
+                  <Button 
+                    onClick={handleCreateEvent} 
+                    disabled={!newEventTitle.trim() || isCreatingEvent}
+                    className="min-w-[100px]"
+                  >
+                    {isCreatingEvent ? 'Oluşturuluyor...' : 'Oluştur'}
+                  </Button>
+                </DialogFooter>
               </DialogContent>
             </Dialog>
           </div>
@@ -330,11 +398,35 @@ export default function HostDashboard() {
 
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">Status: <span className="font-medium capitalize">{currentEvent.status}</span></p>
-                    {currentEvent.status === 'pending' && (
-                      <Button onClick={handleStartEvent} className="w-full">
-                        Start Event
-                      </Button>
-                    )}
+                    <div className="flex flex-col gap-2">
+                      {currentEvent.status === 'pending' && (
+                        <Button onClick={handleStartEvent} className="w-full">
+                          Etkinliği Başlat
+                        </Button>
+                      )}
+                      {currentEvent.status === 'active' && (
+                        <>
+                          <Button onClick={handlePauseEvent} variant="outline" className="w-full">
+                            Etkinliği Duraklat
+                          </Button>
+                          <Button onClick={handleEndEvent} variant="destructive" className="w-full">
+                            Etkinliği Bitir
+                          </Button>
+                        </>
+                      )}
+                      {currentEvent.status === 'finished' && (
+                        <>
+                          <div className="bg-muted/50 rounded-lg p-3 mb-2">
+                            <p className="text-sm text-muted-foreground text-center">
+                              Bu etkinlik sona erdi
+                            </p>
+                          </div>
+                          <Button onClick={handleStartEvent} className="w-full">
+                            Etkinliği Tekrar Başlat
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
 
                   <div className="space-y-2">

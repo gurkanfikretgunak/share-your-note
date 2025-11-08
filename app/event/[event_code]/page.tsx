@@ -13,7 +13,7 @@ import { EventTheme } from '@/components/event-theme'
 import { createClient } from '@/lib/supabase'
 import { getOrCreateAnonymousUser, getStoredAnonymousUser } from '@/lib/anonymous-auth'
 import { NoteWithParticipant, Event, Participant, ConsentType } from '@/types/database.types'
-import { Smile, Heart, ThumbsUp, PartyPopper } from 'lucide-react'
+import { Smile, Heart, ThumbsUp, PartyPopper, CheckCircle2, Home, X } from 'lucide-react'
 import { toast } from 'sonner'
 
 const EMOTIONS = [
@@ -42,6 +42,7 @@ export default function EventPage() {
   const [policyConsent, setPolicyConsent] = useState(false)
   const [cookieConsent, setCookieConsent] = useState(false)
   const [eventDataConsent, setEventDataConsent] = useState(false)
+  const [eventStatus, setEventStatus] = useState<'pending' | 'active' | 'finished' | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -96,11 +97,19 @@ export default function EventPage() {
       }
 
       if (eventData.status === 'finished') {
-        setError('This event has ended')
+        setEventStatus('finished')
+        setEvent(eventData)
         setIsLoading(false)
         return
       }
 
+      if (eventData.status === 'pending') {
+        setError('Bu etkinlik henüz başlamadı. Lütfen host\'un etkinliği başlatmasını bekleyin.')
+        setIsLoading(false)
+        return
+      }
+
+      setEventStatus(eventData.status)
       setEvent(eventData)
 
       // Check for stored anonymous user
@@ -510,10 +519,44 @@ export default function EventPage() {
 
   if (error && !showUsernamePrompt) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
-        <div className="text-center space-y-4">
-          <p className="text-destructive">{error}</p>
-          <Button onClick={() => router.push('/')}>Go Home</Button>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="text-center space-y-4 max-w-md px-6">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-destructive/10 mb-4">
+            <X className="h-8 w-8 text-destructive" />
+          </div>
+          <h2 className="text-2xl font-semibold text-gray-900">Etkinlik Bulunamadı</h2>
+          <p className="text-muted-foreground">{error}</p>
+          <Button onClick={() => router.push('/')} className="mt-4">
+            <Home className="mr-2 h-4 w-4" />
+            Ana Sayfaya Dön
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  if (eventStatus === 'finished' && event) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50">
+        <div className="text-center space-y-6 max-w-lg px-6">
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg mb-4 animate-pulse">
+            <CheckCircle2 className="h-12 w-12 text-white" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold text-gray-900">{event.title}</h1>
+            <p className="text-xl text-muted-foreground">Etkinlik Sona Erdi</p>
+          </div>
+          <div className="bg-white/80 backdrop-blur-sm rounded-lg p-6 shadow-lg border border-white/20">
+            <p className="text-gray-600 mb-4">
+              Bu etkinlik tamamlandı. Katıldığınız için teşekkür ederiz!
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button onClick={() => router.push('/')} variant="default" className="w-full sm:w-auto">
+                <Home className="mr-2 h-4 w-4" />
+                Ana Sayfaya Dön
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     )

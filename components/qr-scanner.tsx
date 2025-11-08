@@ -120,15 +120,30 @@ export function QRScanner({ open, onClose, onScan }: QRScannerProps) {
   }, [open, onScan, onClose])
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      if (!isOpen) {
+        // Clean up scanner when closing
+        if (scannerRef.current) {
+          try {
+            scannerRef.current.clear()
+          } catch (e) {
+            // Ignore cleanup errors
+          }
+          scannerRef.current = null
+        }
+        setError(null)
+        setIsInitializing(false)
+        onClose()
+      }
+    }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Scan QR Code</DialogTitle>
+          <DialogTitle>QR Kodunu Tara</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           {isInitializing && !error && (
             <div className="text-center py-8">
-              <p className="text-sm text-muted-foreground">Initializing camera...</p>
+              <p className="text-sm text-muted-foreground">Kamera başlatılıyor...</p>
             </div>
           )}
           {error ? (
@@ -137,19 +152,36 @@ export function QRScanner({ open, onClose, onScan }: QRScannerProps) {
                 {error}
               </div>
               <div className="text-xs text-muted-foreground space-y-1">
-                <p>Tips:</p>
+                <p>İpuçları:</p>
                 <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li>Make sure you&apos;ve granted camera permissions to this website</li>
-                  <li>Check your browser settings if permissions were denied</li>
-                  <li>Try refreshing the page and allowing camera access when prompted</li>
+                  <li>Bu web sitesine kamera izni verdiğinizden emin olun</li>
+                  <li>İzinler reddedildiyse tarayıcı ayarlarınızı kontrol edin</li>
+                  <li>Sayfayı yenileyin ve kamera erişimine izin verin</li>
                 </ul>
               </div>
             </div>
           ) : (
             <div ref={containerRef} id="qr-reader" className="w-full min-h-[300px]"></div>
           )}
-          <Button onClick={onClose} variant="outline" className="w-full">
-            {error ? 'Close' : 'Cancel'}
+          <Button 
+            onClick={() => {
+              // Clean up scanner when closing
+              if (scannerRef.current) {
+                try {
+                  scannerRef.current.clear()
+                } catch (e) {
+                  // Ignore cleanup errors
+                }
+                scannerRef.current = null
+              }
+              setError(null)
+              setIsInitializing(false)
+              onClose()
+            }} 
+            variant="outline" 
+            className="w-full"
+          >
+            {error ? 'Kapat' : 'İptal'}
           </Button>
         </div>
       </DialogContent>
