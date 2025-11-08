@@ -24,7 +24,6 @@ export default function EventPage() {
   const params = useParams()
   const router = useRouter()
   const eventCode = params.event_code as string
-  const supabase = createClient()
 
   const [event, setEvent] = useState<Event | null>(null)
   const [participant, setParticipant] = useState<Participant | null>(null)
@@ -35,11 +34,18 @@ export default function EventPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    loadEvent()
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (mounted && eventCode) {
+      loadEvent()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eventCode])
+  }, [eventCode, mounted])
 
   useEffect(() => {
     if (event && participant) {
@@ -49,7 +55,11 @@ export default function EventPage() {
   }, [event, participant])
 
   const loadEvent = async () => {
+    if (!mounted) return
+    
     try {
+      setIsLoading(true)
+      const supabase = createClient()
       // Check if event exists
       const { data: eventData, error: eventError } = await supabase
         .from('events')
@@ -74,9 +84,10 @@ export default function EventPage() {
       // Check for stored anonymous user
       const storedUser = getStoredAnonymousUser()
       if (storedUser) {
-        await joinEvent(storedUser.id)
+        await joinEvent(storedUser.id, supabase)
       } else {
         setShowUsernamePrompt(true)
+        setIsLoading(false)
       }
     } catch (err) {
       const error = err as Error
@@ -91,22 +102,25 @@ export default function EventPage() {
       return
     }
 
+    setIsLoading(true)
     try {
+      const supabase = createClient()
       const user = await getOrCreateAnonymousUser(username.trim())
       setShowUsernamePrompt(false)
-      await joinEvent(user.id)
+      await joinEvent(user.id, supabase)
     } catch (err) {
       const error = err as Error
       setError(error.message || 'Failed to join event')
+      setIsLoading(false)
     }
   }
 
-  const joinEvent = async (profileId: string) => {
+  const joinEvent = async (profileId: string, supabaseClient = createClient()) => {
     if (!event) return
     
     try {
       // Check if already a participant
-      const { data: existingParticipant } = await supabase
+      const { data: existingParticipant } = await supabaseClient
         .from('participants')
         .select('*')
         .eq('event_id', event.id)
@@ -120,7 +134,7 @@ export default function EventPage() {
       }
 
       // Join as participant
-      const { data: newParticipant, error: joinError } = await supabase
+      const { data: newParticipant, error: joinError } = await supabaseClient
         .from('participants')
         .insert({
           event_id: event.id,
@@ -146,6 +160,7 @@ export default function EventPage() {
   const subscribeToNotes = () => {
     if (!event) return
 
+    const supabase = createClient()
     const channel = supabase
       .channel(`notes:${event.id}`)
       .on(
@@ -178,17 +193,17 @@ export default function EventPage() {
       .subscribe()
 
     // Load existing notes
-    loadNotes()
+    loadNotes(supabase)
 
     return () => {
       supabase.removeChannel(channel)
     }
   }
 
-  const loadNotes = async () => {
+  const loadNotes = async (supabaseClient = createClient()) => {
     if (!event) return
 
-    const { data: notesData } = await supabase
+    const { data: notesData } = await supabaseClient
       .from('notes')
       .select(`
         *,
@@ -211,6 +226,7 @@ export default function EventPage() {
 
     setIsSubmitting(true)
     try {
+      const supabase = createClient()
       const { error: noteError } = await supabase.from('notes').insert({
         event_id: event.id,
         participant_id: participant.id,
@@ -236,6 +252,7 @@ export default function EventPage() {
 
     setIsSubmitting(true)
     try {
+      const supabase = createClient()
       const { error: noteError } = await supabase.from('notes').insert({
         event_id: event.id,
         participant_id: participant.id,
@@ -259,6 +276,7 @@ export default function EventPage() {
 
     setIsSubmitting(true)
     try {
+      const supabase = createClient()
       const { error: noteError } = await supabase.from('notes').insert({
         event_id: event.id,
         participant_id: participant.id,
