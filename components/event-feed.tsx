@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { NoteWithParticipant } from '@/types/database.types'
 import { formatDistanceToNow } from 'date-fns'
+import { Star } from 'lucide-react'
 
 interface EventFeedProps {
   notes: NoteWithParticipant[]
@@ -38,7 +39,7 @@ export function EventFeed({ notes }: EventFeedProps) {
         <Card 
           key={note.id} 
           ref={index === 0 ? firstNoteRef : null}
-          className="animate-in fade-in slide-in-from-top-2 duration-300"
+          className={`animate-in fade-in slide-in-from-top-2 duration-300 ${note.is_favorited ? 'border-yellow-400 border-2 bg-yellow-50/50' : ''}`}
         >
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
@@ -49,6 +50,9 @@ export function EventFeed({ notes }: EventFeedProps) {
               </Avatar>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
+                  {note.is_favorited && (
+                    <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                  )}
                   <span className="font-medium text-sm">
                     {note.participant.profile.username}
                   </span>

@@ -34,6 +34,7 @@ export interface Note {
   content_type: ContentType
   content_data: string
   created_at: string
+  is_favorited?: boolean
 }
 
 export interface NoteWithParticipant extends Note {

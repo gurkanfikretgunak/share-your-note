@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { createClient } from '@/lib/supabase'
 import { EventMode, NoteWithParticipant, Event } from '@/types/database.types'
 import { QRCodeSVG } from 'qrcode.react'
-import { LogOut, Send, Trash2, Edit2, X, Check } from 'lucide-react'
+import { LogOut, Send, Trash2, Edit2, X, Check, Star } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import Image from 'next/image'
 
@@ -120,8 +120,39 @@ export default function HostDashboard() {
             .single()
 
           if (newNote) {
-            setNotes((prev) => [newNote as NoteWithParticipant, ...prev])
+            setNotes((prev) => {
+              // Sort: favorited first, then by created_at
+              const updated = [newNote as NoteWithParticipant, ...prev]
+              return updated.sort((a, b) => {
+                if (a.is_favorited && !b.is_favorited) return -1
+                if (!a.is_favorited && b.is_favorited) return 1
+                return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+              })
+            })
           }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'notes',
+          filter: `event_id=eq.${currentEvent.id}`,
+        },
+        async (payload: { new: { id: string; is_favorited?: boolean } }) => {
+          // Update note in local state and re-sort
+          setNotes((prev) => {
+            const updated = prev.map((note) =>
+              note.id === payload.new.id ? { ...note, is_favorited: payload.new.is_favorited || false } : note
+            )
+            // Sort: favorited first, then by created_at
+            return updated.sort((a, b) => {
+              if (a.is_favorited && !b.is_favorited) return -1
+              if (!a.is_favorited && b.is_favorited) return 1
+              return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            })
+          })
         }
       )
       .on(
@@ -159,6 +190,7 @@ export default function HostDashboard() {
         )
       `)
       .eq('event_id', currentEvent.id)
+      .order('is_favorited', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(100)
 
@@ -348,6 +380,30 @@ export default function HostDashboard() {
     setCurrentEvent({ ...currentEvent, title: editingTitle.trim() })
     setIsEditingTitle(false)
     setEditingTitle('')
+  }
+
+  const handleToggleFavorite = async (noteId: string, currentFavorite: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('notes')
+        .update({ is_favorited: !currentFavorite })
+        .eq('id', noteId)
+
+      if (error) {
+        alert('Favori durumu güncellenirken hata oluştu: ' + error.message)
+        return
+      }
+
+      // Update local state
+      setNotes((prev) =>
+        prev.map((note) =>
+          note.id === noteId ? { ...note, is_favorited: !currentFavorite } : note
+        )
+      )
+    } catch (err) {
+      const error = err as Error
+      alert('Favori durumu güncellenirken hata oluştu: ' + error.message)
+    }
   }
 
   const handleLogout = async () => {
@@ -579,7 +635,7 @@ export default function HostDashboard() {
                   ) : (
                     <div className="space-y-4">
                       {notes.map((note) => (
-                        <Card key={note.id}>
+                        <Card key={note.id} className={note.is_favorited ? 'border-yellow-400 border-2 bg-yellow-50/50' : ''}>
                           <CardContent className="p-4">
                             <div className="flex items-start gap-3">
                               <Avatar>
@@ -590,6 +646,9 @@ export default function HostDashboard() {
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between gap-2 mb-1">
                                   <div className="flex items-center gap-2">
+                                    {note.is_favorited && (
+                                      <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                                    )}
                                     <span className="font-medium text-sm">
                                       {note.participant.profile.username}
                                     </span>
@@ -597,16 +656,27 @@ export default function HostDashboard() {
                                       {formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}
                                     </span>
                                   </div>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                    onClick={() => handleDeleteNote(note.id)}
-                                    disabled={deletingNoteId === note.id}
-                                    title="Mesajı Sil"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className={`h-7 w-7 ${note.is_favorited ? 'text-yellow-500 hover:text-yellow-600 hover:bg-yellow-100' : 'text-muted-foreground hover:text-yellow-500'}`}
+                                      onClick={() => handleToggleFavorite(note.id, note.is_favorited || false)}
+                                      title={note.is_favorited ? 'Favorilerden Çıkar' : 'Favorilere Ekle'}
+                                    >
+                                      <Star className={`h-3.5 w-3.5 ${note.is_favorited ? 'fill-current' : ''}`} />
+                                    </Button>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                      onClick={() => handleDeleteNote(note.id)}
+                                      disabled={deletingNoteId === note.id}
+                                      title="Mesajı Sil"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
                                 </div>
                                 <div className="mt-2">
                                   {note.content_type === 'text' && (

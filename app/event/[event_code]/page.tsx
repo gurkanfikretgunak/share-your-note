@@ -308,13 +308,41 @@ export default function EventPage() {
                   return prev
                 }
                 console.log('Adding new note to feed:', newNote.id)
-                // Add to the beginning (most recent first)
-                return [newNote as NoteWithParticipant, ...prev]
+                // Add to the beginning and sort: favorited first, then by created_at
+                const updated = [newNote as NoteWithParticipant, ...prev]
+                return updated.sort((a, b) => {
+                  if (a.is_favorited && !b.is_favorited) return -1
+                  if (!a.is_favorited && b.is_favorited) return 1
+                  return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                })
               })
             }
           } catch (err) {
             console.error('Error processing new note:', err)
           }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'notes',
+          filter: `event_id=eq.${event.id}`,
+        },
+        (payload: { new: { id: string; is_favorited?: boolean } }) => {
+          // Update note in local state and re-sort
+          setNotes((prev) => {
+            const updated = prev.map((note) =>
+              note.id === payload.new.id ? { ...note, is_favorited: payload.new.is_favorited || false } : note
+            )
+            // Sort: favorited first, then by created_at
+            return updated.sort((a, b) => {
+              if (a.is_favorited && !b.is_favorited) return -1
+              if (!a.is_favorited && b.is_favorited) return 1
+              return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            })
+          })
         }
       )
       .on(
@@ -419,6 +447,7 @@ export default function EventPage() {
           )
         `)
         .eq('event_id', event.id)
+        .order('is_favorited', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(50)
 
