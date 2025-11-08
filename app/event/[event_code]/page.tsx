@@ -265,9 +265,11 @@ export default function EventPage() {
   }
 
   const subscribeToNotes = () => {
-    if (!event) return () => {}
+    if (!event || !participant) return () => {}
 
     const supabase = createClient()
+    const currentEventId = event.id
+    const currentParticipantId = participant.id
     const channel = supabase
       .channel(`notes:${event.id}`)
       .on(
@@ -276,7 +278,7 @@ export default function EventPage() {
           event: 'INSERT',
           schema: 'public',
           table: 'notes',
-          filter: `event_id=eq.${event.id}`,
+          filter: `event_id=eq.${currentEventId}`,
         },
         async (payload: { new: { id: string } }) => {
           try {
@@ -308,8 +310,14 @@ export default function EventPage() {
                   return prev
                 }
                 console.log('Adding new note to feed:', newNote.id)
+                // Add new note with default like count (will be 0)
+                const noteWithLikes = {
+                  ...newNote,
+                  like_count: 0,
+                  is_liked_by_current_user: false,
+                } as NoteWithParticipant
                 // Add to the beginning and sort: favorited first, then by created_at
-                const updated = [newNote as NoteWithParticipant, ...prev]
+                const updated = [noteWithLikes, ...prev]
                 return updated.sort((a, b) => {
                   if (a.is_favorited && !b.is_favorited) return -1
                   if (!a.is_favorited && b.is_favorited) return 1
@@ -328,7 +336,7 @@ export default function EventPage() {
           event: 'UPDATE',
           schema: 'public',
           table: 'notes',
-          filter: `event_id=eq.${event.id}`,
+          filter: `event_id=eq.${currentEventId}`,
         },
         (payload: { new: { id: string; is_favorited?: boolean } }) => {
           // Update note in local state and re-sort
@@ -351,11 +359,81 @@ export default function EventPage() {
           event: 'DELETE',
           schema: 'public',
           table: 'notes',
-          filter: `event_id=eq.${event.id}`,
+          filter: `event_id=eq.${currentEventId}`,
         },
         (payload: { old: { id: string } }) => {
           // Remove deleted note from local state
           setNotes((prev) => prev.filter((note) => note.id !== payload.old.id))
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'note_likes',
+        },
+        async (payload: { new: { note_id: string; participant_id: string } }) => {
+          // Fetch the note to check if it belongs to this event
+          const { data: noteData } = await supabase
+            .from('notes')
+            .select('event_id')
+            .eq('id', payload.new.note_id)
+            .single()
+          
+          if (!noteData || noteData.event_id !== currentEventId) return
+
+          // Update like count for the note
+          setNotes((prev) =>
+            prev.map((note) => {
+              if (note.id === payload.new.note_id) {
+                const newLikeCount = (note.like_count || 0) + 1
+                const isLikedByCurrentUser = payload.new.participant_id === currentParticipantId
+                return {
+                  ...note,
+                  like_count: newLikeCount,
+                  is_liked_by_current_user: isLikedByCurrentUser || note.is_liked_by_current_user,
+                }
+              }
+              return note
+            })
+          )
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'note_likes',
+        },
+        async (payload: { old: { note_id: string; participant_id: string } }) => {
+          // Fetch the note to check if it belongs to this event
+          const { data: noteData } = await supabase
+            .from('notes')
+            .select('event_id')
+            .eq('id', payload.old.note_id)
+            .single()
+          
+          if (!noteData || noteData.event_id !== currentEventId) return
+
+          // Update like count for the note
+          setNotes((prev) =>
+            prev.map((note) => {
+              if (note.id === payload.old.note_id) {
+                const newLikeCount = Math.max(0, (note.like_count || 0) - 1)
+                const isLikedByCurrentUser = payload.old.participant_id === currentParticipantId 
+                  ? false 
+                  : note.is_liked_by_current_user
+                return {
+                  ...note,
+                  like_count: newLikeCount,
+                  is_liked_by_current_user: isLikedByCurrentUser,
+                }
+              }
+              return note
+            })
+          )
         }
       )
       .subscribe((status: string) => {
@@ -434,9 +512,10 @@ export default function EventPage() {
   }
 
   const loadNotes = async (supabaseClient = createClient()) => {
-    if (!event) return
+    if (!event || !participant) return
 
     try {
+      // First get all notes
       const { data: notesData, error: notesError } = await supabaseClient
         .from('notes')
         .select(`
@@ -457,9 +536,36 @@ export default function EventPage() {
         return
       }
 
-      if (notesData) {
-        setNotes(notesData as NoteWithParticipant[])
-      }
+      if (!notesData) return
+
+      // Get like counts and check if current user liked each note
+      const noteIds = notesData.map(n => n.id)
+      const { data: likesData } = await supabaseClient
+        .from('note_likes')
+        .select('note_id, participant_id')
+        .in('note_id', noteIds)
+
+      // Calculate like counts and check if current user liked
+      const notesWithLikes = notesData.map((note) => {
+        const noteLikes = likesData?.filter(like => like.note_id === note.id) || []
+        const likeCount = noteLikes.length
+        const isLikedByCurrentUser = noteLikes.some(like => like.participant_id === participant.id)
+        
+        return {
+          ...note,
+          like_count: likeCount,
+          is_liked_by_current_user: isLikedByCurrentUser,
+        } as NoteWithParticipant
+      })
+
+      // Sort: favorited first, then by created_at
+      const sortedNotes = notesWithLikes.sort((a, b) => {
+        if (a.is_favorited && !b.is_favorited) return -1
+        if (!a.is_favorited && b.is_favorited) return 1
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      })
+
+      setNotes(sortedNotes)
     } catch (err) {
       const error = err as Error
       console.error('Error loading notes:', error)
@@ -546,6 +652,56 @@ export default function EventPage() {
       setError(error.message || 'Failed to submit image')
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handleToggleLike = async (noteId: string, isCurrentlyLiked: boolean) => {
+    if (!participant || !event) return
+
+    try {
+      const supabase = createClient()
+      
+      if (isCurrentlyLiked) {
+        // Unlike: delete the like
+        const { error } = await supabase
+          .from('note_likes')
+          .delete()
+          .eq('note_id', noteId)
+          .eq('participant_id', participant.id)
+
+        if (error) throw error
+      } else {
+        // Like: insert the like
+        const { error } = await supabase
+          .from('note_likes')
+          .insert({
+            note_id: noteId,
+            participant_id: participant.id,
+          })
+
+        if (error) throw error
+      }
+
+      // Update local state
+      setNotes((prev) =>
+        prev.map((note) => {
+          if (note.id === noteId) {
+            const newLikeCount = isCurrentlyLiked 
+              ? (note.like_count || 0) - 1 
+              : (note.like_count || 0) + 1
+            return {
+              ...note,
+              like_count: Math.max(0, newLikeCount),
+              is_liked_by_current_user: !isCurrentlyLiked,
+            }
+          }
+          return note
+        })
+      )
+    } catch (err) {
+      const error = err as Error
+      console.error('Error toggling like:', error)
+      setError('Beğeni işlemi başarısız: ' + error.message)
     }
   }
 
@@ -730,7 +886,7 @@ export default function EventPage() {
               </div>
             )}
 
-            <EventFeed notes={notes} />
+            <EventFeed notes={notes} onToggleLike={handleToggleLike} />
           </div>
         </div>
 

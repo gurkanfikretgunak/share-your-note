@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { createClient } from '@/lib/supabase'
 import { EventMode, NoteWithParticipant, Event } from '@/types/database.types'
 import { QRCodeSVG } from 'qrcode.react'
-import { LogOut, Send, Trash2, Edit2, X, Check, Star } from 'lucide-react'
+import { LogOut, Send, Trash2, Edit2, X, Check, Star, Heart } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import Image from 'next/image'
 
@@ -121,8 +121,13 @@ export default function HostDashboard() {
 
           if (newNote) {
             setNotes((prev) => {
+              // Add new note with default like count (will be 0)
+              const noteWithLikes = {
+                ...newNote,
+                like_count: 0,
+              } as NoteWithParticipant
               // Sort: favorited first, then by created_at
-              const updated = [newNote as NoteWithParticipant, ...prev]
+              const updated = [noteWithLikes, ...prev]
               return updated.sort((a, b) => {
                 if (a.is_favorited && !b.is_favorited) return -1
                 if (!a.is_favorited && b.is_favorited) return 1
@@ -130,6 +135,68 @@ export default function HostDashboard() {
               })
             })
           }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'note_likes',
+        },
+        async (payload: { new: { note_id: string } }) => {
+          // Check if note belongs to current event
+          const { data: noteData } = await supabase
+            .from('notes')
+            .select('event_id')
+            .eq('id', payload.new.note_id)
+            .single()
+          
+          if (!noteData || !currentEvent || noteData.event_id !== currentEvent.id) return
+
+          // Update like count
+          setNotes((prev) =>
+            prev.map((note) => {
+              if (note.id === payload.new.note_id) {
+                return {
+                  ...note,
+                  like_count: (note.like_count || 0) + 1,
+                }
+              }
+              return note
+            })
+          )
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'note_likes',
+        },
+        async (payload: { old: { note_id: string } }) => {
+          // Check if note belongs to current event
+          const { data: noteData } = await supabase
+            .from('notes')
+            .select('event_id')
+            .eq('id', payload.old.note_id)
+            .single()
+          
+          if (!noteData || !currentEvent || noteData.event_id !== currentEvent.id) return
+
+          // Update like count
+          setNotes((prev) =>
+            prev.map((note) => {
+              if (note.id === payload.old.note_id) {
+                return {
+                  ...note,
+                  like_count: Math.max(0, (note.like_count || 0) - 1),
+                }
+              }
+              return note
+            })
+          )
         }
       )
       .on(
@@ -194,9 +261,32 @@ export default function HostDashboard() {
       .order('created_at', { ascending: false })
       .limit(100)
 
-    if (notesData) {
-      setNotes(notesData as NoteWithParticipant[])
-    }
+    if (!notesData) return
+
+    // Get like counts for all notes
+    const noteIds = notesData.map(n => n.id)
+    const { data: likesData } = await supabase
+      .from('note_likes')
+      .select('note_id')
+      .in('note_id', noteIds)
+
+    // Calculate like counts
+    const notesWithLikes = notesData.map((note) => {
+      const likeCount = likesData?.filter(like => like.note_id === note.id).length || 0
+      return {
+        ...note,
+        like_count: likeCount,
+      } as NoteWithParticipant
+    })
+
+    // Sort: favorited first, then by created_at
+    const sortedNotes = notesWithLikes.sort((a, b) => {
+      if (a.is_favorited && !b.is_favorited) return -1
+      if (!a.is_favorited && b.is_favorited) return 1
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    })
+
+    setNotes(sortedNotes)
   }
 
   const generateEventCode = async (): Promise<string> => {
@@ -695,6 +785,12 @@ export default function HostDashboard() {
                                     <div className="text-4xl">{note.content_data}</div>
                                   )}
                                 </div>
+                                {(note.like_count !== undefined && note.like_count > 0) && (
+                                  <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+                                    <Heart className="h-3.5 w-3.5 fill-red-500 text-red-500" />
+                                    <span>{note.like_count} beğeni</span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </CardContent>

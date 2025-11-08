@@ -4,15 +4,17 @@ import { useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
 import { NoteWithParticipant } from '@/types/database.types'
 import { formatDistanceToNow } from 'date-fns'
-import { Star } from 'lucide-react'
+import { Star, Heart } from 'lucide-react'
 
 interface EventFeedProps {
   notes: NoteWithParticipant[]
+  onToggleLike?: (noteId: string, isCurrentlyLiked: boolean) => void
 }
 
-export function EventFeed({ notes }: EventFeedProps) {
+export function EventFeed({ notes, onToggleLike }: EventFeedProps) {
   const prevNotesLengthRef = useRef(notes.length)
   const firstNoteRef = useRef<HTMLDivElement>(null)
 
@@ -77,6 +79,21 @@ export function EventFeed({ notes }: EventFeedProps) {
                     <div className="text-4xl">{note.content_data}</div>
                   )}
                 </div>
+                {onToggleLike && (
+                  <div className="mt-3 flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className={`h-8 gap-1.5 ${note.is_liked_by_current_user ? 'text-red-500 hover:text-red-600 hover:bg-red-50' : 'text-muted-foreground hover:text-red-500'}`}
+                      onClick={() => onToggleLike(note.id, note.is_liked_by_current_user || false)}
+                    >
+                      <Heart className={`h-4 w-4 ${note.is_liked_by_current_user ? 'fill-current' : ''}`} />
+                      <span className="text-xs font-medium">
+                        {note.like_count || 0}
+                      </span>
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>

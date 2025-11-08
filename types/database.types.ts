@@ -41,6 +41,8 @@ export interface NoteWithParticipant extends Note {
   participant: Participant & {
     profile: Profile
   }
+  like_count?: number
+  is_liked_by_current_user?: boolean
 }
 
 export type ConsentType = 'gdpr' | 'policy' | 'cookie' | 'event_data_sharing'
