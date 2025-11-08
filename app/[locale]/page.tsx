@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { QRScanner } from '@/components/qr-scanner'
 import { LanguageSwitcher } from '@/components/language-switcher'
-import { QrCode, Cake, PartyPopper, Sparkles } from 'lucide-react'
+import { QrCode, Cake, PartyPopper, Sparkles, Github } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import Confetti from 'react-confetti'
 import { EventMode } from '@/types/database.types'
@@ -490,7 +490,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="w-full border-t bg-white/80 backdrop-blur-sm py-4 px-6 relative z-10">
-        <div className="max-w-md mx-auto text-center">
+        <div className="max-w-md mx-auto text-center space-y-2">
           <p className="text-sm text-muted-foreground">
             {t('hostPrompt')}{' '}
             <a
@@ -500,6 +500,28 @@ export default function Home() {
               {t('goToDashboard')}
             </a>
           </p>
+          <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
+            <a
+              href="https://github.com/gurkanfikretgunak/share-your-note"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 hover:text-primary transition-colors"
+            >
+              <Github className="h-3 w-3" />
+              <span>Source Code</span>
+            </a>
+            <span>•</span>
+            <span>by @gurkanfikretgunak</span>
+            <span>•</span>
+            <a
+              href="https://cursor.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-primary transition-colors"
+            >
+              Built with Cursor
+            </a>
+          </div>
         </div>
       </footer>
     </div>
