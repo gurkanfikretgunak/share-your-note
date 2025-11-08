@@ -42,3 +42,14 @@ export interface NoteWithParticipant extends Note {
   }
 }
 
+export type ConsentType = 'gdpr' | 'policy' | 'cookie' | 'event_data_sharing'
+
+export interface Consent {
+  id: string
+  profile_id: string
+  event_id: string | null
+  consent_type: ConsentType
+  consented: boolean
+  consented_at: string
+}
+

@@ -5,13 +5,14 @@ import { useParams, useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import { EventFeed } from '@/components/event-feed'
 import { HostAnnouncement } from '@/components/host-announcement'
 import { ImageUpload } from '@/components/image-upload'
 import { EventTheme } from '@/components/event-theme'
 import { createClient } from '@/lib/supabase'
 import { getOrCreateAnonymousUser, getStoredAnonymousUser } from '@/lib/anonymous-auth'
-import { NoteWithParticipant, Event, Participant } from '@/types/database.types'
+import { NoteWithParticipant, Event, Participant, ConsentType } from '@/types/database.types'
 import { Smile, Heart, ThumbsUp, PartyPopper } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -37,6 +38,10 @@ export default function EventPage() {
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [gdprConsent, setGdprConsent] = useState(false)
+  const [policyConsent, setPolicyConsent] = useState(false)
+  const [cookieConsent, setCookieConsent] = useState(false)
+  const [eventDataConsent, setEventDataConsent] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -130,6 +135,12 @@ export default function EventPage() {
       return
     }
 
+    // Check if all required consents are given
+    if (!gdprConsent || !policyConsent || !cookieConsent || !eventDataConsent) {
+      setError('Lütfen tüm onayları kabul edin')
+      return
+    }
+
     setIsLoading(true)
     setError(null)
     try {
@@ -195,6 +206,10 @@ export default function EventPage() {
 
       console.log('joinEvent: Successfully joined event')
       setParticipant(newParticipant)
+      
+      // Save consents to database
+      await saveConsents(profileId, eventToUse.id, supabaseClient)
+      
       setIsLoading(false)
     } catch (err) {
       const error = err as Error
@@ -202,6 +217,41 @@ export default function EventPage() {
       setError(error.message || 'Failed to join event')
       setIsLoading(false)
       throw err // Re-throw to handle in handleUsernameSubmit
+    }
+  }
+
+  const saveConsents = async (profileId: string, eventId: string, supabaseClient = createClient()) => {
+    const consents: Array<{ profile_id: string; event_id: string | null; consent_type: ConsentType; consented: boolean }> = [
+      { profile_id: profileId, event_id: null, consent_type: 'gdpr', consented: gdprConsent },
+      { profile_id: profileId, event_id: null, consent_type: 'policy', consented: policyConsent },
+      { profile_id: profileId, event_id: null, consent_type: 'cookie', consented: cookieConsent },
+      { profile_id: profileId, event_id: eventId, consent_type: 'event_data_sharing', consented: eventDataConsent },
+    ]
+
+    try {
+      // Insert or update each consent individually
+      // Since we're using a unique index, we need to handle conflicts manually
+      for (const consent of consents) {
+        // First, try to delete existing consent if it exists
+        await supabaseClient
+          .from('consents')
+          .delete()
+          .eq('profile_id', consent.profile_id)
+          .eq('consent_type', consent.consent_type)
+          .is('event_id', consent.event_id === null ? null : consent.event_id)
+
+        // Then insert the new consent
+        const { error: consentError } = await supabaseClient
+          .from('consents')
+          .insert(consent)
+
+        if (consentError) {
+          console.error('Error saving consent:', consentError, consent)
+        }
+      }
+    } catch (err) {
+      console.error('Exception saving consents:', err)
+      // Don't throw error here, as joining event is more important
     }
   }
 
@@ -474,8 +524,8 @@ export default function EventPage() {
       <div className="flex min-h-screen items-center justify-center bg-white">
         <div className="w-full max-w-md px-6 space-y-4">
           <div className="text-center">
-            <h2 className="text-2xl font-semibold mb-2">Join Event</h2>
-            <p className="text-muted-foreground">Enter your name to join</p>
+            <h2 className="text-2xl font-semibold mb-2">Etkinliğe Katıl</h2>
+            <p className="text-muted-foreground">Katılmak için adınızı girin ve onayları kabul edin</p>
           </div>
           <form onSubmit={handleUsernameSubmit} className="space-y-4">
             {error && (
@@ -485,7 +535,7 @@ export default function EventPage() {
             )}
             <Input
               type="text"
-              placeholder="Your name"
+              placeholder="Adınız"
               value={username}
               onChange={(e) => {
                 setUsername(e.target.value)
@@ -494,8 +544,67 @@ export default function EventPage() {
               autoFocus
               disabled={isLoading}
             />
-            <Button type="submit" className="w-full" disabled={!username.trim() || isLoading || !event}>
-              {isLoading ? 'Joining...' : 'Join'}
+            
+            <div className="space-y-3 pt-2">
+              <div className="flex items-start space-x-2">
+                <Checkbox
+                  id="gdpr"
+                  checked={gdprConsent}
+                  onChange={(e) => setGdprConsent(e.target.checked)}
+                  disabled={isLoading}
+                  className="mt-1"
+                />
+                <label htmlFor="gdpr" className="text-sm leading-relaxed cursor-pointer">
+                  GDPR veri koruma politikasını kabul ediyorum
+                </label>
+              </div>
+              
+              <div className="flex items-start space-x-2">
+                <Checkbox
+                  id="policy"
+                  checked={policyConsent}
+                  onChange={(e) => setPolicyConsent(e.target.checked)}
+                  disabled={isLoading}
+                  className="mt-1"
+                />
+                <label htmlFor="policy" className="text-sm leading-relaxed cursor-pointer">
+                  Kullanım şartlarını ve gizlilik politikasını kabul ediyorum
+                </label>
+              </div>
+              
+              <div className="flex items-start space-x-2">
+                <Checkbox
+                  id="cookie"
+                  checked={cookieConsent}
+                  onChange={(e) => setCookieConsent(e.target.checked)}
+                  disabled={isLoading}
+                  className="mt-1"
+                />
+                <label htmlFor="cookie" className="text-sm leading-relaxed cursor-pointer">
+                  Çerez kullanımını kabul ediyorum
+                </label>
+              </div>
+              
+              <div className="flex items-start space-x-2">
+                <Checkbox
+                  id="event-data"
+                  checked={eventDataConsent}
+                  onChange={(e) => setEventDataConsent(e.target.checked)}
+                  disabled={isLoading}
+                  className="mt-1"
+                />
+                <label htmlFor="event-data" className="text-sm leading-relaxed cursor-pointer">
+                  Etkinlik ile ilgili verilerimin paylaşılmasını kabul ediyorum
+                </label>
+              </div>
+            </div>
+            
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={!username.trim() || isLoading || !event || !gdprConsent || !policyConsent || !cookieConsent || !eventDataConsent}
+            >
+              {isLoading ? 'Katılıyor...' : 'Katıl'}
             </Button>
           </form>
         </div>
