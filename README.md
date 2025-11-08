@@ -20,6 +20,15 @@ A real-time, Kahoot-like web application where attendees can join events managed
 - **Animations:** React Confetti, CSS Animations
 - **Internationalization:** next-intl (Turkish & English support)
 
+## Screenshots
+
+<div align="center">
+  <img src="docs/images/share-your-note%20-%201.png" alt="Share Your Note Screenshot 1" width="800"/>
+  <img src="docs/images/share-your-note%20-%202.png" alt="Share Your Note Screenshot 2" width="800"/>
+  <img src="docs/images/share-your-note%20-%203.png" alt="Share Your Note Screenshot 3" width="800"/>
+  <img src="docs/images/share-your-note%20-%204.png" alt="Share Your Note Screenshot 4" width="800"/>
+</div>
+
 ## Features
 
 ### Core Features
