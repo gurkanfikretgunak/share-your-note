@@ -1,8 +1,16 @@
--- Create event_mode enum
-CREATE TYPE event_mode AS ENUM ('general', 'birthday', 'party');
+-- Create event_mode enum (idempotent)
+DO $$ BEGIN
+  CREATE TYPE event_mode AS ENUM ('general', 'birthday', 'party');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
--- Create event_status enum
-CREATE TYPE event_status AS ENUM ('pending', 'active', 'finished');
+-- Create event_status enum (idempotent)
+DO $$ BEGIN
+  CREATE TYPE event_status AS ENUM ('pending', 'active', 'finished');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- Create events table
 CREATE TABLE IF NOT EXISTS events (
@@ -17,6 +25,11 @@ CREATE TABLE IF NOT EXISTS events (
 
 -- Enable RLS
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist (for idempotency)
+DROP POLICY IF EXISTS "Events are viewable by everyone" ON events;
+DROP POLICY IF EXISTS "Hosts can insert their own events" ON events;
+DROP POLICY IF EXISTS "Hosts can update their own events" ON events;
 
 -- Policy: Everyone can read events
 CREATE POLICY "Events are viewable by everyone"
@@ -60,4 +73,3 @@ $$ LANGUAGE plpgsql;
 -- Index for faster event code lookups
 CREATE INDEX IF NOT EXISTS idx_events_event_code ON events(event_code);
 CREATE INDEX IF NOT EXISTS idx_events_host_id ON events(host_id);
-

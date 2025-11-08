@@ -1,5 +1,9 @@
--- Create participant_role enum
-CREATE TYPE participant_role AS ENUM ('host', 'attendee');
+-- Create participant_role enum (idempotent)
+DO $$ BEGIN
+  CREATE TYPE participant_role AS ENUM ('host', 'attendee');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- Create participants table
 CREATE TABLE IF NOT EXISTS participants (
@@ -14,6 +18,12 @@ CREATE TABLE IF NOT EXISTS participants (
 -- Enable RLS
 ALTER TABLE participants ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist (for idempotency)
+DROP POLICY IF EXISTS "Participants are viewable by everyone" ON participants;
+DROP POLICY IF EXISTS "Users can insert themselves as participants" ON participants;
+DROP POLICY IF EXISTS "Anonymous users can insert as participants" ON participants;
+DROP POLICY IF EXISTS "Hosts can insert participants for their events" ON participants;
+
 -- Policy: Everyone can read participants
 CREATE POLICY "Participants are viewable by everyone"
   ON participants FOR SELECT
@@ -22,7 +32,12 @@ CREATE POLICY "Participants are viewable by everyone"
 -- Policy: Users can insert themselves as participants
 CREATE POLICY "Users can insert themselves as participants"
   ON participants FOR INSERT
-  WITH CHECK (auth.uid() = profile_id OR auth.uid() IS NULL);
+  WITH CHECK (auth.uid() = profile_id);
+
+-- Policy: Anonymous users can insert themselves as participants
+CREATE POLICY "Anonymous users can insert as participants"
+  ON participants FOR INSERT
+  WITH CHECK (auth.uid() IS NULL);
 
 -- Policy: Hosts can insert participants for their events
 CREATE POLICY "Hosts can insert participants for their events"
@@ -38,4 +53,3 @@ CREATE POLICY "Hosts can insert participants for their events"
 -- Index for faster lookups
 CREATE INDEX IF NOT EXISTS idx_participants_event_id ON participants(event_id);
 CREATE INDEX IF NOT EXISTS idx_participants_profile_id ON participants(profile_id);
-

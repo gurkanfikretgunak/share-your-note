@@ -1,5 +1,9 @@
--- Create content_type enum
-CREATE TYPE content_type AS ENUM ('text', 'image', 'emotion');
+-- Create content_type enum (idempotent)
+DO $$ BEGIN
+  CREATE TYPE content_type AS ENUM ('text', 'image', 'emotion');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- Create notes table
 CREATE TABLE IF NOT EXISTS notes (
@@ -13,6 +17,10 @@ CREATE TABLE IF NOT EXISTS notes (
 
 -- Enable RLS
 ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist (for idempotency)
+DROP POLICY IF EXISTS "Notes are viewable by event participants" ON notes;
+DROP POLICY IF EXISTS "Participants can insert notes" ON notes;
 
 -- Policy: Everyone can read notes for events they're part of
 CREATE POLICY "Notes are viewable by event participants"
@@ -40,4 +48,3 @@ CREATE POLICY "Participants can insert notes"
 CREATE INDEX IF NOT EXISTS idx_notes_event_id ON notes(event_id);
 CREATE INDEX IF NOT EXISTS idx_notes_participant_id ON notes(participant_id);
 CREATE INDEX IF NOT EXISTS idx_notes_created_at ON notes(created_at DESC);
-

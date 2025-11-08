@@ -3,6 +3,12 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('event-images', 'event-images', true)
 ON CONFLICT (id) DO NOTHING;
 
+-- Drop existing policies if they exist (for idempotency)
+DROP POLICY IF EXISTS "Event images are publicly viewable" ON storage.objects;
+DROP POLICY IF EXISTS "Anyone can upload event images" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update their own uploads" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete their own uploads" ON storage.objects;
+
 -- Policy: Anyone can view images
 CREATE POLICY "Event images are publicly viewable"
   ON storage.objects FOR SELECT

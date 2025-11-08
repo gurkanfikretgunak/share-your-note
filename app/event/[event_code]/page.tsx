@@ -98,25 +98,31 @@ export default function EventPage() {
 
   const handleUsernameSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!username.trim()) {
+    if (!username.trim() || !event) {
       return
     }
 
     setIsLoading(true)
+    setError(null)
     try {
       const supabase = createClient()
       const user = await getOrCreateAnonymousUser(username.trim())
-      setShowUsernamePrompt(false)
       await joinEvent(user.id, supabase)
+      // Only hide prompt after successful join
+      setShowUsernamePrompt(false)
     } catch (err) {
       const error = err as Error
       setError(error.message || 'Failed to join event')
       setIsLoading(false)
+      // Keep username prompt open on error
     }
   }
 
   const joinEvent = async (profileId: string, supabaseClient = createClient()) => {
-    if (!event) return
+    if (!event) {
+      setIsLoading(false)
+      return
+    }
     
     try {
       // Check if already a participant
@@ -154,6 +160,7 @@ export default function EventPage() {
       const error = err as Error
       setError(error.message || 'Failed to join event')
       setIsLoading(false)
+      throw err // Re-throw to handle in handleUsernameSubmit
     }
   }
 
@@ -325,15 +332,24 @@ export default function EventPage() {
             <p className="text-muted-foreground">Enter your name to join</p>
           </div>
           <form onSubmit={handleUsernameSubmit} className="space-y-4">
+            {error && (
+              <div className="p-3 bg-destructive/10 text-destructive text-sm rounded-md">
+                {error}
+              </div>
+            )}
             <Input
               type="text"
               placeholder="Your name"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => {
+                setUsername(e.target.value)
+                setError(null)
+              }}
               autoFocus
+              disabled={isLoading}
             />
-            <Button type="submit" className="w-full" disabled={!username.trim()}>
-              Join
+            <Button type="submit" className="w-full" disabled={!username.trim() || isLoading || !event}>
+              {isLoading ? 'Joining...' : 'Join'}
             </Button>
           </form>
         </div>
