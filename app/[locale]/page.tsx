@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useTranslations, useLocale } from 'next-intl'
 import { Input } from '@/components/ui/input'
@@ -20,6 +20,7 @@ export default function Home() {
   const [selectedMode, setSelectedMode] = useState<EventMode>('general')
   const [showConfetti, setShowConfetti] = useState(false)
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
+  const eventCodeInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
   const pathname = usePathname()
   const locale = useLocale()
@@ -91,49 +92,33 @@ export default function Home() {
     }
   }
 
-  const handleQRScan = async (code: string) => {
+  const handleQRScan = (code: string) => {
     setQrScannerOpen(false)
-    const eventCodeValue = code.trim().toUpperCase()
-    setEventCode(eventCodeValue)
     
-    // Automatically join after scanning QR code
-    if (eventCodeValue) {
-      setIsLoading(true)
-      setError(null)
-
-      try {
-        // Check if event exists
-        const { data: event, error: eventError } = await supabase
-          .from('events')
-          .select('id, status, event_code')
-          .eq('event_code', eventCodeValue)
-          .single()
-
-        if (eventError || !event) {
-          setError(t('errors.invalidCode'))
-          setIsLoading(false)
-          return
-        }
-
-        if (event.status === 'finished') {
-          setError(t('errors.eventEnded'))
-          setIsLoading(false)
-          return
-        }
-
-        if (event.status === 'pending') {
-          setError(t('errors.eventPending'))
-          setIsLoading(false)
-          return
-        }
-
-        // Redirect to event page with locale
-        router.push(`/${locale}/event/${eventCodeValue}`)
-      } catch {
-        setError(t('errors.somethingWrong'))
-        setIsLoading(false)
-      }
+    // Parse QR code - could be event code or full URL
+    let eventCodeValue = code.trim().toUpperCase()
+    
+    // If QR code contains a URL, extract the event code
+    // Example: https://example.com/tr/event/ABC123 or /tr/event/ABC123
+    const urlMatch = code.match(/\/(?:tr|en)\/event\/([A-Z0-9]{6})/i)
+    if (urlMatch) {
+      eventCodeValue = urlMatch[1].toUpperCase()
+    } else {
+      // If it's just the event code, use it directly
+      eventCodeValue = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 6)
     }
+    
+    // Set the event code in the input field
+    setEventCode(eventCodeValue)
+    setError(null)
+    
+    // Focus the input field for better UX
+    setTimeout(() => {
+      if (eventCodeInputRef.current) {
+        eventCodeInputRef.current.focus()
+        eventCodeInputRef.current.select()
+      }
+    }, 100)
   }
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -443,6 +428,7 @@ export default function Home() {
           <div className="w-full bg-white/80 backdrop-blur-sm rounded-lg border shadow-sm p-6 space-y-4">
             <div className="space-y-2">
               <Input
+                ref={eventCodeInputRef}
                 type="text"
                 placeholder={t('eventCodePlaceholder')}
                 value={eventCode}
@@ -462,20 +448,26 @@ export default function Home() {
 
             <Button
               onClick={handleJoin}
-              disabled={isLoading}
+              disabled={isLoading || !eventCode.trim()}
               className="w-full"
               size="lg"
             >
               {isLoading ? tCommon('joining') : t('joinButton')}
             </Button>
 
+            <div className="flex items-center gap-3 my-2">
+              <div className="flex-1 h-px bg-border"></div>
+              <span className="text-sm text-muted-foreground">{tCommon('or')}</span>
+              <div className="flex-1 h-px bg-border"></div>
+            </div>
+
             <Button
               onClick={() => setQrScannerOpen(true)}
               variant="outline"
-              className="w-full"
+              className="w-full border-2"
               size="lg"
             >
-              <QrCode className="mr-2 h-4 w-4" />
+              <QrCode className="mr-2 h-5 w-5" />
               {t('joinWithQR')}
             </Button>
           </div>
