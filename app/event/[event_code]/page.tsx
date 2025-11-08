@@ -104,7 +104,7 @@ export default function EventPage() {
       if (storedUser) {
         try {
           console.log('loadEvent: Attempting to join event with stored user...')
-          await joinEvent(storedUser.id, supabase)
+          await joinEvent(storedUser.id, supabase, eventData)
           console.log('loadEvent: Successfully joined event')
         } catch (err) {
           console.error('loadEvent: Error joining event:', err)
@@ -146,8 +146,9 @@ export default function EventPage() {
     }
   }
 
-  const joinEvent = async (profileId: string, supabaseClient = createClient()) => {
-    if (!event) {
+  const joinEvent = async (profileId: string, supabaseClient = createClient(), eventData?: Event) => {
+    const eventToUse = eventData || event
+    if (!eventToUse) {
       console.error('joinEvent: event is null')
       setIsLoading(false)
       return
@@ -159,7 +160,7 @@ export default function EventPage() {
       const { data: existingParticipant, error: checkError } = await supabaseClient
         .from('participants')
         .select('*')
-        .eq('event_id', event.id)
+        .eq('event_id', eventToUse.id)
         .eq('profile_id', profileId)
         .maybeSingle()
 
@@ -180,7 +181,7 @@ export default function EventPage() {
       const { data: newParticipant, error: joinError } = await supabaseClient
         .from('participants')
         .insert({
-          event_id: event.id,
+          event_id: eventToUse.id,
           profile_id: profileId,
           role: 'attendee',
         })
@@ -220,6 +221,7 @@ export default function EventPage() {
         },
         async (payload: { new: { id: string } }) => {
           try {
+            console.log('New note received:', payload.new.id)
             // Fetch the new note with participant and profile data
             const { data: newNote, error: fetchError } = await supabase
               .from('notes')
@@ -239,7 +241,17 @@ export default function EventPage() {
             }
 
             if (newNote) {
-              setNotes((prev) => [newNote as NoteWithParticipant, ...prev])
+              // Check if note already exists to prevent duplicates
+              setNotes((prev) => {
+                const exists = prev.some((n) => n.id === newNote.id)
+                if (exists) {
+                  console.log('Note already exists, skipping:', newNote.id)
+                  return prev
+                }
+                console.log('Adding new note to feed:', newNote.id)
+                // Add to the beginning (most recent first)
+                return [newNote as NoteWithParticipant, ...prev]
+              })
             }
           } catch (err) {
             console.error('Error processing new note:', err)
@@ -251,6 +263,10 @@ export default function EventPage() {
           console.log('Subscribed to notes channel')
         } else if (status === 'CHANNEL_ERROR') {
           console.error('Channel error')
+        } else if (status === 'TIMED_OUT') {
+          console.error('Channel timed out')
+        } else if (status === 'CLOSED') {
+          console.log('Channel closed')
         }
       })
 
@@ -258,6 +274,7 @@ export default function EventPage() {
     loadNotes(supabase)
 
     return () => {
+      console.log('Cleaning up notes subscription')
       supabase.removeChannel(channel)
     }
   }
@@ -368,10 +385,7 @@ export default function EventPage() {
       }
 
       setTextInput('')
-      // Reload notes to ensure the new note appears
-      setTimeout(() => {
-        loadNotes(supabase)
-      }, 500)
+      // Note will be added via realtime subscription, no need to reload
     } catch (err) {
       const error = err as Error
       setError(error.message || 'Failed to submit note')
@@ -398,10 +412,7 @@ export default function EventPage() {
         throw noteError
       }
 
-      // Reload notes to ensure the new note appears
-      setTimeout(() => {
-        loadNotes(supabase)
-      }, 500)
+      // Note will be added via realtime subscription, no need to reload
     } catch (err) {
       const error = err as Error
       setError(error.message || 'Failed to submit emotion')
@@ -428,10 +439,7 @@ export default function EventPage() {
         throw noteError
       }
 
-      // Reload notes to ensure the new note appears
-      setTimeout(() => {
-        loadNotes(supabase)
-      }, 500)
+      // Note will be added via realtime subscription, no need to reload
     } catch (err) {
       const error = err as Error
       setError(error.message || 'Failed to submit image')
