@@ -2,6 +2,15 @@
 
 A real-time, Kahoot-like web application where attendees can join events managed by hosts to share notes, images, and emotions in real-time.
 
+## Tech Stack Badges
+
+![Next.js](https://img.shields.io/badge/Next.js-16.0-black?style=for-the-badge&logo=next.js&logoColor=white)
+![React](https://img.shields.io/badge/React-19.2-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.0-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![Built with Cursor](https://img.shields.io/badge/Built%20with-Cursor-000000?style=for-the-badge&logo=cursor&logoColor=white)
+
 ## Tech Stack
 
 - **Framework:** Next.js 16 (App Router)
